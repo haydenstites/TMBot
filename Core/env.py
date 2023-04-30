@@ -1,36 +1,7 @@
 import gymnasium as gym
 from gymnasium.spaces import Box, Discrete, MultiDiscrete, MultiBinary
 import numpy as np
-from collections import OrderedDict
-from IO import read_from_tmdata
-from util import norm_float, binary_strbool, mat_index
-
-# self.action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
-# self.observation_space = gym.spaces.Box(low=np.array([-1.0, -2.0]), high=np.array([2.0, 4.0]), dtype=np.float32)
-
-# VelocityY float
-# VelocityX float
-# Gear int gear
-# Drift bool drift
-# Slip float slip
-# Material string -> float traction? int surfaceType?
-# Grounded bool
-# TopContact bool
-# RaceState string -> 0 1 2
-# Checkpoint int
-# TotalCheckpoints int
-# BonkTime int
-# BonkScore float
-
-# Observation space of each TMData var
-# obs_vars = np.array([
-#     [-1000.0, 1000.0], # velocityY
-#     [-1000.0, 1000.0], # velocityX
-#     [1.0, 5.0], # gear
-# ])
-# obs_lows, obs_highs = np.float32(obs_vars[:,0]), np.float32(obs_vars[:,1])
-
-
+from IO import write_actions, get_observations
 
 # e.g. enabled = {
 #     "frame" : True,
@@ -38,64 +9,66 @@ from util import norm_float, binary_strbool, mat_index
 #     "slip" : True,
 # }
 # e.g. frame_shape = (1, 32, 32) # Channels, height, width
-class TMEnv(gym.Env):
-    def __init__(self, op_path : str, frame_shape : tuple[int] = None, enabled : dict[str, bool] = None):
-        """Action space is XY game input
+class TMBaseEnv(gym.Env):
+    """Trackmania Base Environment, :meth:`step` function can be overridden for custom implementations."""
+    def __init__(self, op_path : str, frame_shape : tuple[int] = None, enabled : dict[str, bool] = None, rew_enabled : dict[str, bool] = None):
+        """Initialization parameters for TMBaseEnv. Parameters in enabled and rew_enabled should match output variables in TMData.
 
-        Observation space TMData output vars
+        Args:
+            op_path (str) : Path to Openplanet installation folder. Typically "C:\\Users\\yournamehere\\OpenplanetNext"
+
+            frame_shape (tuple[int], Optional) : Observation size of image frame passed to CNN, formatted (channels, height, width).
+            Default is (1, 36, 36), which is also the elementwise minimum frame size.
+
+            enabled (dict[str, bool], Optional) : Dictionary describing enabled parameters in observation space. Default is True for every key.
+
+            rew_enabled (dict[str, bool], Optional) : Dictionary describing enabled parameters for reward shaping. Default is True for every key.
         """
+
+        frame_shape = (1, 36, 36) if frame_shape is None else frame_shape
+
         # Discrete(2) converted from bool, TODO: More elegant solution?
         obs_vars = {
             "frame" : Box(low=0, high=255, shape=frame_shape, dtype=np.uint8), # Image specs of SB3
             "velocity" : Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32), # Normed from -1000 to 1000
-            "gear" : Discrete(5, start=1),
+            "gear" : Discrete(5),
             "drift" : Discrete(2),
             "slip" : Box(low=-1.0, high=1.0, shape=(1,), dtype=np.float32), # Normed from 0 to 1
             "material" : Discrete(7), # None, tech, plastic, dirt, grass, ice, other
             "grounded" : Discrete(2),
         }
+        rew_keys = ("top_contact", "race_state", "checkpoint", "total_checkpoints", "bonk_time", "bonk_score")
 
-        enabled = {} if enabled == None else enabled 
+        enabled = {} if enabled is None else enabled
         for key in list(obs_vars):
             enabled.setdefault(key, True) # Any unspecified key defaults to True
             if enabled[key] is False:
-                obs_vars.pop(key)
-
-        # obs_vars is left with only used keys as specified by enabled
+                obs_vars.pop(key) # obs_vars is left with only used keys as specified by enabled
+        
+        rew_enabled = {} if rew_enabled is None else rew_enabled
+        for key in rew_keys:
+            rew_enabled.setdefault(key, True)
 
         self.action_space = MultiDiscrete([3, 3], dtype=np.int32)
         self.observation_space = gym.spaces.Dict(obs_vars)
 
         self.op_path = op_path
         self.enabled = enabled
+        self.rew_enabled = rew_enabled
+
+        self.write_actions = write_actions
+        self.get_observations = get_observations
 
     def step(self, action):
-        obs, rew_vars = self._get_observations()     
+        raise NotImplementedError
+
+        # return obs, reward, terminated, truncated, info
 
     def reset(self):
-        pass
+        obs = self.get_observations(self.op_path, self.enabled)
 
-    def _get_observations(self):
-        vars = read_from_tmdata(self.op_path)
-        obs = OrderedDict()
+        # Write reset key to TMData
 
-        if self.enabled["velocity"]:
-            obs["velocity"] = np.array([norm_float(vars[0], -1000, 1000), norm_float(vars[1], -1000, 1000)], dtype=np.float32)
-            del vars[0:2]
-        if self.enabled["gear"]:
-            obs["gear"] = int(vars[0])
-            del vars[0]
-        if self.enabled["drift"]:
-            obs["drift"] = binary_strbool(vars[0])
-            del vars[0]
-        if self.enabled["slip"]:
-            obs["slip"] = np.array([norm_float(vars[0], 0, 1)], dtype=np.float32)
-            del vars[0]
-        if self.enabled["material"]:
-            obs["material"] = mat_index(vars[0])
-            del vars[0]
-        if self.enabled["grounded"]:
-            obs["grounded"] = binary_strbool(vars[0])
-            del vars[0]
+        info = {}
 
-        return obs, vars
+        return obs, info
