@@ -1,3 +1,5 @@
+# Conversion util functions
+
 def norm_float(value : float, min : float, max : float) -> float:
     value = float(value)
     return ((value - min) / (max - min)) * 2 - 1 # Scale value proportionally between min and max

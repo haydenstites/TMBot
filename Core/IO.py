@@ -1,7 +1,6 @@
 from pathlib import Path
 import pandas as pd
 import numpy as np
-import gymnasium as gym
 from util import norm_float, binary_strbool, mat_index, race_index
 
 # Get all vars from TMData
@@ -17,13 +16,19 @@ def read_from_tmdata(op_path) -> list:
 
 # Write actions to TMData
 def write_actions(op_path, action : np.ndarray):
-    # 0 : None, 1 : Positive, 2 : Negative
-    y_input = action[0]
-    x_input = action[1]
-    
     data_path = Path(op_path + r"\PluginStorage\TMData\in.txt")
-    data = pd.DataFrame([y_input, x_input])
 
+    # 0 : Negative, 1 : None, 2 : Positive
+    y_input = action[0] - 1
+    x_input = action[1] - 1
+
+    data = pd.DataFrame([y_input, x_input])
+    data.to_csv(data_path, index=False, header=False)
+
+def write_reset(op_path):
+    data_path = Path(op_path + r"\PluginStorage\TMData\reset.txt")
+
+    data = pd.DataFrame([1])
     data.to_csv(data_path, index=False, header=False)
 
 # Read observations from TMData
@@ -69,7 +74,7 @@ def get_observations(op_path, enabled, rew_enabled = None):
             rew_vars["bonk_time"] = int(vars[0])
             del vars[0]
         if rew_enabled["bonk_score"]:
-            rew_vars["bonk_score"] = int(vars[0])
+            rew_vars["bonk_score"] = float(vars[0])
             del vars[0]
 
         return obs, rew_vars
