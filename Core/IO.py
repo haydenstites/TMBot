@@ -42,7 +42,7 @@ def write_alt(op_path, reset : bool = None, pause : bool = None):
     data.to_csv(data_path, index=False, header=False)
 
 # Read observations from TMData
-def get_observations(op_path, enabled, rew_enabled = None):
+def get_observations(op_path, enabled : dict, rew_enabled : dict = None):
     # TODO: Cleanup? May not be necessary
     vars = read_from_tmdata(op_path)
     obs = {}

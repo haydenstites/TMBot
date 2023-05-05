@@ -1,3 +1,23 @@
+import pyautogui
+import numpy as np
+from PIL import Image
+
+def get_frame(shape : tuple[int, int], mode : str = "L", crop : bool = False):
+    frame = pyautogui.screenshot().convert(mode)
+    if crop:
+        frame = _square_crop(frame)
+    frame = frame.resize(shape)
+    return np.asarray(frame, dtype=np.uint8)
+
+def _square_crop(image : Image.Image):
+    width, height = image.size
+    offset  = int(abs(height-width)/2)
+    if width > height:
+        image = image.crop([offset, 0, width-offset, height])
+    elif width < height:
+        image = image.crop([0, offset, width, height-offset])
+    return image
+
 # Conversion util functions
 
 def norm_float(value : float, min : float, max : float) -> float:

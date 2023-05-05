@@ -4,26 +4,30 @@ from gymnasium.spaces import Box, Discrete, MultiDiscrete
 from gymnasium.core import ActType
 from stable_baselines3.common.callbacks import BaseCallback
 from IO import get_observations, write_actions, write_alt
+from util import get_frame
 from typing import Any
 
 class TMBaseEnv(gym.Env):
     """Trackmania Base Environment, :meth:`reward` function must be overridden for custom implementations."""
-    def __init__(self, op_path : str, frame_shape : tuple[int] = None, enabled : dict[str, bool] = None, rew_enabled : dict[str, bool] = None):
+    def __init__(self, op_path : str, frame_shape : tuple[int] = None, enabled : dict[str, bool] = None, rew_enabled : dict[str, bool] = None, square_frame : bool = True):
         r"""Initialization parameters for TMBaseEnv. Parameters in enabled and rew_enabled should match output variables in TMData.
 
         Args:
             op_path (str) : Path to Openplanet installation folder. Typically "C:\Users\NAME\OpenplanetNext"
 
-            frame_shape (tuple[int], Optional) : Observation size of image frame passed to CNN, formatted (channels, height, width).
-            Default is (1, 36, 36), which is also the elementwise minimum frame size.
+            frame_shape (tuple[int]) : Observation size of image frame passed to CNN, formatted (channels, height, width).
+            Must be at least (1, 36, 36). Default is (1, 50, 50).
 
-            enabled (dict[str, bool], Optional) : Dictionary describing enabled parameters in observation space. Default is True for every key.
+            enabled (dict[str, bool]) : Dictionary describing enabled parameters in observation space. Default is True for every key.
 
-            rew_enabled (dict[str, bool], Optional) : Dictionary describing enabled parameters for reward shaping. Default is True for every key.
+            rew_enabled (dict[str, bool]) : Dictionary describing enabled parameters for reward shaping. Default is True for every key.
+
+            square_frame (bool) : Crops observed frames to squares. Default is True.
         """
 
         min_frame_shape = (1, 36, 36)
-        frame_shape = min_frame_shape if frame_shape is None else frame_shape
+        default_frame_shape = (1, 50, 50)
+        frame_shape = default_frame_shape if frame_shape is None else frame_shape
         assert frame_shape >= min_frame_shape, f"frame_shape {frame_shape} is less than min_frame_shape {min_frame_shape}"
 
         # Discrete(2) converted from bool, TODO: More elegant solution?
@@ -54,6 +58,8 @@ class TMBaseEnv(gym.Env):
         self.op_path = op_path
         self.enabled = enabled
         self.rew_enabled = rew_enabled
+        self.frame_shape = frame_shape
+        self.square_frame = square_frame
 
         self.held_obs = {}
         self.held_rew = {}
@@ -62,13 +68,7 @@ class TMBaseEnv(gym.Env):
     def step(self, action):
         write_actions(self.op_path, action)
 
-        # TODO: Find % of steps being held
-        try:
-            obs, rew_vars = get_observations(self.op_path, self.enabled, self.rew_enabled)
-            self.held_obs, self.held_rew = obs, rew_vars
-        except:
-            # Triggers if file is being written
-            obs, rew_vars = self.held_obs, self.held_rew
+        obs, rew_vars = self._handle_observations()
 
         reward, terminated, truncated, info = self.reward(action, obs, rew_vars)
 
@@ -122,13 +122,30 @@ class TMBaseEnv(gym.Env):
         return reward, terminated, truncated, info
 
     def reset(self):
-        obs = get_observations(self.op_path, self.enabled)
+        obs, _ = self._handle_observations()
 
         write_alt(self.op_path, reset = True)
 
         info = {}
 
         return obs, info
+    
+    def _handle_observations(self):
+        # TODO: Find % of steps being held
+        try:
+            obs, rew_vars = get_observations(self.op_path, self.enabled, self.rew_enabled)
+            self.held_obs, self.held_rew = obs, rew_vars
+        except:
+            # Triggers if file is being written
+            obs, rew_vars = self.held_obs, self.held_rew
+        obs = self._handle_frame(obs) # Frame isn't held
+        return obs, rew_vars
+    
+    def _handle_frame(self, obs):
+        if self.enabled["frame"]:
+            # TODO: RGB observations
+            obs["frame"] = get_frame(self.frame_shape[1:], mode = "L", crop = self.square_frame)
+        return obs
     
 class TMPauseOnUpdate(BaseCallback):
     """Pauses game execution when updating model.
