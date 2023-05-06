@@ -69,6 +69,12 @@ def get_observations(op_path, enabled : dict, rew_enabled : dict = None):
         if rew_enabled["race_state"]:
             rew_vars["race_state"] = race_index(vars[0])
             del vars[0]
+        if rew_enabled["author_time"]:
+            rew_vars["author_time"] = int(vars[0])
+            del vars[0]
+        if rew_enabled["time"]:
+            rew_vars["time"] = int(vars[0])
+            del vars[0]
         if rew_enabled["checkpoint"]:
             rew_vars["checkpoint"] = int(vars[0])
             del vars[0]

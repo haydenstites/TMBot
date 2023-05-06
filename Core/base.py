@@ -2,7 +2,6 @@ import gymnasium as gym
 import numpy as np
 from gymnasium.spaces import Box, Discrete, MultiDiscrete
 from gymnasium.core import ActType
-from stable_baselines3.common.callbacks import BaseCallback
 from IO import get_observations, write_actions, write_alt
 from util import get_frame
 from typing import Any
@@ -39,7 +38,7 @@ class TMBaseEnv(gym.Env):
             "material" : Discrete(7), # None, tech, plastic, dirt, grass, ice, other
             "grounded" : Discrete(2),
         }
-        rew_keys = ("top_contact", "race_state", "checkpoint", "total_checkpoints", "bonk_time")
+        rew_keys = ("top_contact", "race_state", "author_time", "time", "checkpoint", "total_checkpoints", "bonk_time")
 
         enabled = {} if enabled is None else enabled
         for key in list(obs_vars):
@@ -72,8 +71,6 @@ class TMBaseEnv(gym.Env):
 
         reward, terminated, truncated, info = self.reward(action, obs, rew_vars)
 
-        # TODO: Zero reward when respawning
-
         return obs, reward, terminated, truncated, info
 
     def reward(self, action : ActType, obs : dict[str, Any], rew_vars : dict[str, Any]) -> tuple[float, bool, bool, dict]:
@@ -96,25 +93,51 @@ class TMBaseEnv(gym.Env):
 
             info (dict) : Debug information. Can be returned as empty dict if unused.
         """
+        # GOAL: Get agent to finish track as fast as possible
 
-        # TODO: Better reward function
+        # Timestep based rewards:
 
-        self.uns.setdefault("bonk_time", 0)
+        reward = -.05 # Small negative reward per timestep
 
-        reward = obs["velocity"][0] + action[0] / 10
+        vel_rm, w_rm = 1.5, 0.05
+        reward += obs["velocity"][0] * vel_rm
+        reward += action[0] * w_rm
 
-        if (rew_vars["race_state"] == 2):
-            reward = 10
+        ts_rew_scale = 1
+        reward *= ts_rew_scale
+
+        # Goal based rewards:
+
+        if self.uns["held_checkpoint"] < rew_vars["checkpoint"]:
+            self.uns["held_checkpoint"] = rew_vars["checkpoint"]
+
+            intercept = .5 # Reward ratio of first checkpoint to final
+            checkpoint_priority = ((rew_vars["checkpoint"] - 1) / (rew_vars["total_checkpoints"] - 1)) * (1 - intercept) + intercept
+
+            checkpoint_rm = 5 # Value of final checkpoint
+            reward += checkpoint_priority * checkpoint_rm
+        
+        if rew_vars["race_state"] == 2: # Finish state
+            reward += 15
+
+            # Ideal time - completion time
+            time_diff = self.uns["start_time"] + rew_vars["author_time"] - rew_vars["time"]
+            time_rm = 1 # Reward per second
+            reward += max((time_diff / 1000) * time_rm, -7) # Final reward cannot be too low
+            
             terminated = True
-        elif (rew_vars["top_contact"] == 1):
-            reward = -5
+        elif rew_vars["top_contact"] == 1:
+            reward += -3
             terminated = True
-        elif (self.uns["bonk_time"] != rew_vars["bonk_time"]):
-            self.uns["bonk_time"] = rew_vars["bonk_time"]
-            reward = -3
+        elif rew_vars["bonk_time"] == rew_vars["time"]:
+            reward += -2
             terminated = True
         else:
             terminated = False
+
+        # Respawn timer
+        if self.uns["start_time"] < rew_vars["time"]:
+            reward = 0
 
         info = {}
         truncated = False
@@ -122,9 +145,12 @@ class TMBaseEnv(gym.Env):
         return reward, terminated, truncated, info
 
     def reset(self):
-        obs, _ = self._handle_observations()
+        obs, rew_vars = self._handle_observations()
 
         write_alt(self.op_path, reset = True)
+
+        self.uns["start_time"] = rew_vars["time"] + 1600
+        self.uns["held_checkpoint"] = 0
 
         info = {}
 
@@ -146,26 +172,3 @@ class TMBaseEnv(gym.Env):
             # TODO: RGB observations
             obs["frame"] = get_frame(self.frame_shape[1:], mode = "L", crop = self.square_frame)
         return obs
-    
-class TMPauseOnUpdate(BaseCallback):
-    """Pauses game execution when updating model.
-    """
-    def __init__(self, op_path, verbose=0):
-        super().__init__(verbose)
-        self.op_path = op_path
-        self.first_rollout = True
-
-    def _on_rollout_start(self) -> None:
-        if (not self.first_rollout):
-            print("Rollout starting, unpausing Trackmania.")
-            write_alt(self.op_path, pause=True)
-        else:
-            self.first_rollout = False
-
-    def _on_rollout_end(self):
-        print("Rollout ending, pausing Trackmania.")
-        write_alt(self.op_path, pause=True)
-
-    def _on_step(self):
-        # Required method, return False to abort training
-        return True
