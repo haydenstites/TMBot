@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Get all vars from TMData
 def read_from_tmdata(op_path) -> list:
-    data_path = Path(op_path + r"\PluginStorage\TMData\state.txt")
+    data_path = Path(op_path, r"PluginStorage\TMData\state.txt")
     assert Path.exists(data_path), f"Path {data_path} does not exist."
 
     f = pd.read_csv(data_path, header=None)
@@ -18,7 +18,7 @@ def read_from_tmdata(op_path) -> list:
 
 # Write actions to TMData
 def write_actions(op_path, action):
-    data_path = Path(op_path + r"\PluginStorage\TMData\in.txt")
+    data_path = Path(op_path, r"PluginStorage\TMData\in.txt")
 
     # 0 : Negative, 1 : None, 2 : Positive
     y_input = action[0] - 1
@@ -29,7 +29,7 @@ def write_actions(op_path, action):
 
 # Write reset/pause to TMData
 def write_alt(op_path, reset : bool = None, pause : bool = None):
-    data_path = Path(op_path + r"\PluginStorage\TMData\alt.txt")
+    data_path = Path(op_path, r"PluginStorage\TMData\alt.txt")
     assert Path.exists(data_path), f"Path {data_path} does not exist."
 
     f = pd.read_csv(data_path, header=None)

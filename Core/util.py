@@ -1,13 +1,41 @@
-import pyautogui
 import numpy as np
+import win32gui
+import win32ui
+import win32con
+import os
+from pathlib import Path
 from PIL import Image
 
 def get_frame(shape : tuple[int, int], mode : str = "L", crop : bool = False):
-    frame = pyautogui.screenshot().convert(mode)
+    frame = _screenshot().convert(mode)
     if crop:
         frame = _square_crop(frame)
-    frame = frame.resize(shape)
-    return np.asarray(frame, dtype=np.uint8)
+    return np.asarray(frame.resize(shape), dtype=np.uint8)
+
+def _screenshot():
+    hwnd = win32gui.FindWindow(None, "Trackmania")
+
+    left, top, right, bottom = win32gui.GetClientRect(hwnd)
+    w = right - left
+    h = bottom - top
+
+    hwndDC = win32gui.GetWindowDC(hwnd)
+    mfcDC = win32ui.CreateDCFromHandle(hwndDC)
+    dc = mfcDC.CreateCompatibleDC()
+
+    bmp = win32ui.CreateBitmap()
+    bmp.CreateCompatibleBitmap(mfcDC, w, h)
+    dc.SelectObject(bmp)
+
+    dc.BitBlt((0, 0), (w, h), mfcDC, (0, 0), win32con.SRCCOPY)
+    buffer = bmp.GetBitmapBits(True)
+
+    dc.DeleteDC()
+    mfcDC.DeleteDC()
+    win32gui.ReleaseDC(hwnd, hwndDC)
+    win32gui.DeleteObject(bmp.GetHandle())
+
+    return Image.frombuffer("RGBA", (w, h), buffer)
 
 def _square_crop(image : Image.Image):
     width, height = image.size
@@ -17,6 +45,9 @@ def _square_crop(image : Image.Image):
     elif width < height:
         image = image.crop([0, offset, width, height-offset])
     return image
+
+def get_default_op_path():
+    return Path(os.path.expanduser("~"), "OpenPlanetNext")
 
 # Conversion util functions
 
