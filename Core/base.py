@@ -4,12 +4,13 @@ from gymnasium.spaces import Box, Discrete, MultiDiscrete
 from gymnasium.core import ActType
 from IO import get_observations, write_actions, write_alt
 from util import get_frame, get_default_op_path
+from gui import TMGUI
 from typing import Any
 from pathlib import Path
 
 class TMBaseEnv(gym.Env):
-    """Trackmania Base Environment, :meth:`reward` function must be overridden for custom implementations."""
-    def __init__(self, op_path : Path = None, frame_shape : tuple[int] = None, enabled : dict[str, bool] = None, rew_enabled : dict[str, bool] = None, square_frame : bool = True):
+    """Trackmania Base Environment, :meth:`reward` function can be overridden for custom implementations."""
+    def __init__(self, op_path : Path = None, frame_shape : tuple[int, int, int] = None, enabled : dict[str, bool] = None, rew_enabled : dict[str, bool] = None, sc_algorithm : str = "pywinauto", square_frame : bool = True, gui : bool = False):
         r"""Initialization parameters for TMBaseEnv. Parameters in enabled and rew_enabled should match output variables in TMData.
 
         Args:
@@ -22,7 +23,12 @@ class TMBaseEnv(gym.Env):
 
             rew_enabled (dict[str, bool]) : Dictionary describing enabled parameters for reward shaping. Default is True for every key.
 
+            sc_algorithm (str) : Whether to use "pywinauto" or "win32" screen capture algorithm. "win32" is faster
+            but requires the game to be windowed. Default is "pywinauto" for ease of use.
+
             square_frame (bool) : Crops observed frames to squares. Default is True.
+
+            gui (bool) : Enables a tkinter GUI for additional training information. Default is False.
         """
         self.op_path = get_default_op_path() if op_path is None else op_path
 
@@ -55,21 +61,32 @@ class TMBaseEnv(gym.Env):
         self.action_space = MultiDiscrete([3, 3], dtype=np.int32)
         self.observation_space = gym.spaces.Dict(obs_vars)
 
+        self.frame_shape = frame_shape
         self.enabled = enabled
         self.rew_enabled = rew_enabled
-        self.frame_shape = frame_shape
+        self.sc_algorithm = sc_algorithm
         self.square_frame = square_frame
+        self.gui = gui
 
-        self.held_obs = {}
-        self.held_rew = {}
+        self.obs = {}
+        self.rew = {}
         self.uns = {} # Unstructured data
+
+        if self.gui:
+            frame_size = (500, 500)
+            self.window = TMGUI(self, frame_size, self.enabled, self.rew_enabled)
 
     def step(self, action):
         write_actions(self.op_path, action)
 
         obs, rew_vars = self._handle_observations()
 
-        reward, terminated, truncated, info = self.reward(action, obs, rew_vars)
+        ts_reward, goal_reward, terminated, truncated, info = self.reward(action, obs, rew_vars)
+
+        if self.gui:
+            self.window.update(obs, rew_vars, ts_reward, goal_reward)
+
+        reward = ts_reward + goal_reward
 
         return obs, reward, terminated, truncated, info
 
@@ -115,65 +132,65 @@ class TMBaseEnv(gym.Env):
             intercept = .6 # Reward ratio of first checkpoint to final
             checkpoint_priority = ((rew_vars["checkpoint"] - 1) / (rew_vars["total_checkpoints"] - 1)) * (1 - intercept) + intercept
 
-            checkpoint_rm = 7 # Value of final checkpoint
+            checkpoint_rm = 4 # Value of final checkpoint
             goal_reward += checkpoint_priority * checkpoint_rm
         
         if rew_vars["race_state"] == 2: # Finish state
-            goal_reward += 15
+            goal_reward += 30
 
             # Ideal time - completion time
             time_diff = self.uns["start_time"] + rew_vars["author_time"] - rew_vars["time"]
             time_rm = .8 # Reward per second
-            goal_reward += max((time_diff / 1000) * time_rm, -5) # Final reward cannot be too low
+            goal_reward += max((time_diff / 1000) * time_rm, -15) # Final reward cannot be too low
             
             terminated = True
         elif rew_vars["top_contact"] == 1:
-            goal_reward += -5
+            goal_reward += -3
             terminated = True
         elif rew_vars["bonk_time"] > self.uns["bonk_time"]:
             self.uns["bonk_time"] = rew_vars["bonk_time"]
-            goal_reward += -5
+            goal_reward += -4
             terminated = True
         else:
             terminated = False
 
-        reward = ts_reward + goal_reward
-
         # Respawn timer
         if rew_vars["time"] < self.uns["start_time"] :
-            reward = 0
+            ts_reward, goal_reward = 0, 0
 
         info = {}
         truncated = False
         
-        return reward, terminated, truncated, info
+        return ts_reward, goal_reward, terminated, truncated, info
 
     def reset(self):
-        obs, rew_vars = self._handle_observations()
+        self.obs, self.rew = self._handle_observations()
 
         write_alt(self.op_path, reset = True)
 
-        self.uns["start_time"] = rew_vars["time"] + 1600
+        self.uns["start_time"] = self.rew["time"] + 1600
         self.uns["held_checkpoint"] = 0
         self.uns.setdefault("bonk_time", 0)
 
         info = {}
 
-        return obs, info
+        return self.obs, info
     
     def _handle_observations(self):
         # TODO: Find % of steps being held
         try:
-            obs, rew_vars = get_observations(self.op_path, self.enabled, self.rew_enabled)
-            self.held_obs, self.held_rew = obs, rew_vars
+            self.obs, self.rew = get_observations(self.op_path, self.enabled, self.rew_enabled)
+            self.uns.setdefault("total_steps", 0)
+            self.uns["total_steps"] += 1
         except:
             # Triggers if file is being written
-            obs, rew_vars = self.held_obs, self.held_rew
-        obs = self._handle_frame(obs) # Frame isn't held
-        return obs, rew_vars
+            self.uns.setdefault("steps_held", 0)
+            self.uns["steps_held"] += 1
+        self.obs["frame"] = self._handle_frame() # Frame isn't held
+        return self.obs, self.rew
     
-    def _handle_frame(self, obs):
+    def _handle_frame(self):
         if self.enabled["frame"]:
             # TODO: RGB observations
-            obs["frame"] = get_frame(self.frame_shape[1:], mode = "L", crop = self.square_frame)
-        return obs
+            frame = get_frame(self.frame_shape[1:], mode = "L", crop = self.square_frame, algorithm = self.sc_algorithm)
+        return frame
