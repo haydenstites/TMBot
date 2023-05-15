@@ -3,21 +3,29 @@ import tkinter as tk
 import numpy as np
 from PIL import ImageTk, Image
 
-# TODO: percent steps held, ts_reward and goal_reward trends
+# TODO: percent steps held
 
 class TMGUI():
-    def __init__(self, env : gym.Env, frame_size : tuple[int, int], enabled : dict[str, bool], rew_enabled : dict[str, bool]):
+    def __init__(self, env : gym.Env, enabled : dict[str, bool], rew_enabled : dict[str, bool], frame_size : tuple[int, int] = (500, 500), buffer_size : int = 10):
         self.env = env
-        self.frame_size = frame_size
         self.enabled = enabled
         self.rew_enabled = rew_enabled
+        self.frame_size = frame_size
+        self.buffer_size = buffer_size
+        self.uns = {}
+
+        if type(self.buffer_size) is int and self.buffer_size > 0:
+            self.uns.setdefault("ts_buffer", [])
+            self.uns.setdefault("goal_buffer", [])
+        else:
+            self.buffer_size = 0
 
         self.window = tk.Tk()
         self.window.title("TMBot GUI")
 
         pad = 50
-        self.window.columnconfigure(index=0, weight=1, minsize=max(frame_size[0] + pad, 400))
-        self.window.rowconfigure(index=1, weight=1, minsize=max(frame_size[1] + pad, 400))
+        self.window.columnconfigure(index=0, weight=1, minsize=max(self.frame_size[0] + pad, 400))
+        self.window.rowconfigure(index=1, weight=1, minsize=max(self.frame_size[1] + pad, 400))
 
         sys_font = ("System", 0)
 
@@ -79,13 +87,25 @@ class TMGUI():
     def update(self, obs, rew_vars, ts_reward, goal_reward):
         # frame
         if obs["frame"] is not None:
-            image = Image.fromarray(obs["frame"]).resize(self.frame_size, resample=Image.Resampling.NEAREST)
+            image = Image.fromarray(obs["frame"].transpose()).resize(self.frame_size, resample=Image.Resampling.NEAREST)
             frame_tk = ImageTk.PhotoImage(image)
             self.frame_display.config(image=frame_tk)
             self.frame_display.image = frame_tk
 
         # reward
-        self.ts_reward.config(text=f"ts_reward: {ts_reward}")
+        if self.buffer_size > 0:
+            assert len(self.uns["ts_buffer"]) == len(self.uns["goal_buffer"])
+
+            if len(self.uns["ts_buffer"]) >= self.buffer_size:
+                del self.uns["ts_buffer"][0]
+                del self.uns["goal_buffer"][0]
+            self.uns["ts_buffer"].append(ts_reward)
+            self.uns["goal_buffer"].append(goal_reward)
+
+            ts_reward = sum(self.uns["ts_buffer"]) / len(self.uns["ts_buffer"])
+            goal_reward = max(self.uns["goal_buffer"])
+
+        self.ts_reward.config(text=f"ts_reward: {round(ts_reward, 4)}")
         self.goal_reward.config(text=f"goal_reward: {goal_reward}")
 
         # obs
@@ -102,6 +122,10 @@ class TMGUI():
         self.extra.config(text=extra_text)
 
         self.window.update()
+
+    def flush_buffers(self):
+        self.uns["ts_buffer"] = []
+        self.uns["goal_buffer"] = []
 
     def _close_gui(self):
         self.env.gui = False

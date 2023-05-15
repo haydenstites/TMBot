@@ -1,5 +1,6 @@
 import gymnasium as gym
 import numpy as np
+import time
 from gymnasium.spaces import Box, Discrete, MultiDiscrete
 from gymnasium.core import ActType
 from IO import get_observations, write_actions, write_alt
@@ -10,7 +11,7 @@ from pathlib import Path
 
 class TMBaseEnv(gym.Env):
     """Trackmania Base Environment, :meth:`reward` function can be overridden for custom implementations."""
-    def __init__(self, op_path : Path = None, frame_shape : tuple[int, int, int] = None, enabled : dict[str, bool] = None, rew_enabled : dict[str, bool] = None, sc_algorithm : str = "pywinauto", square_frame : bool = True, gui : bool = False):
+    def __init__(self, op_path : Path = None, frame_shape : tuple[int, int, int] = None, enabled : dict[str, bool] = None, rew_enabled : dict[str, bool] = None, sc_algorithm : str = "pywinauto", square_frame : bool = True, gui : bool = False, gui_kwargs : dict = None):
         r"""Initialization parameters for TMBaseEnv. Parameters in enabled and rew_enabled should match output variables in TMData.
 
         Args:
@@ -36,6 +37,7 @@ class TMBaseEnv(gym.Env):
         default_frame_shape = (1, 50, 50)
         frame_shape = default_frame_shape if frame_shape is None else frame_shape
         assert frame_shape >= min_frame_shape, f"frame_shape {frame_shape} is less than min_frame_shape {min_frame_shape}"
+        assert frame_shape[0] == 1 or frame_shape[0] == 3, f"frame_shape[0] must either be equal to 1 for grayscale observations or equal to 3 for RGB observations"
 
         obs_vars = {
             "frame" : Box(low=0, high=255, shape=frame_shape, dtype=np.uint8), # Image specs of SB3
@@ -72,9 +74,9 @@ class TMBaseEnv(gym.Env):
         self.rew = {}
         self.uns = {} # Unstructured data
 
+        gui_kwargs = {} if gui_kwargs is None else gui_kwargs
         if self.gui:
-            frame_size = (500, 500)
-            self.window = TMGUI(self, frame_size, self.enabled, self.rew_enabled)
+            self.window = TMGUI(self, self.enabled, self.rew_enabled, **gui_kwargs)
 
     def step(self, action):
         write_actions(self.op_path, action)
@@ -156,6 +158,9 @@ class TMBaseEnv(gym.Env):
 
         # Respawn timer
         if rew_vars["time"] < self.uns["start_time"] :
+            sleep_time = (self.uns["start_time"] - rew_vars["time"]) / 1000
+            print(f"Sleeping {sleep_time} seconds until respawn...")
+            time.sleep(sleep_time)
             ts_reward, goal_reward = 0, 0
 
         info = {}
@@ -172,6 +177,9 @@ class TMBaseEnv(gym.Env):
         self.uns["held_checkpoint"] = 0
         self.uns.setdefault("bonk_time", 0)
 
+        if self.gui:
+            self.window.flush_buffers()
+
         info = {}
 
         return self.obs, info
@@ -180,17 +188,20 @@ class TMBaseEnv(gym.Env):
         # TODO: Find % of steps being held
         try:
             self.obs, self.rew = get_observations(self.op_path, self.enabled, self.rew_enabled)
-            self.uns.setdefault("total_steps", 0)
-            self.uns["total_steps"] += 1
         except:
             # Triggers if file is being written
             self.uns.setdefault("steps_held", 0)
             self.uns["steps_held"] += 1
         self.obs["frame"] = self._handle_frame() # Frame isn't held
+
+        self.uns.setdefault("total_steps", 0)
+        self.uns["total_steps"] += 1
+
         return self.obs, self.rew
     
     def _handle_frame(self):
         if self.enabled["frame"]:
             # TODO: RGB observations
-            frame = get_frame(self.frame_shape[1:], mode = "L", crop = self.square_frame, algorithm = self.sc_algorithm)
+            mode = "L" if self.frame_shape[0] == 1 else "RGB"
+            frame = get_frame(self.frame_shape[1:], mode = mode, crop = self.square_frame, algorithm = self.sc_algorithm)
         return frame

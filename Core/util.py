@@ -18,7 +18,7 @@ def get_frame(shape : tuple[int, int], mode : str = "L", crop : bool = False, al
     if crop:
         frame = _square_crop(frame)
 
-    return np.asarray(frame.convert(mode).resize(shape), dtype=np.uint8)
+    return np.asarray(frame.convert(mode).resize(shape), dtype=np.uint8).transpose()
 
 def _screenshot():
     hwnd = win32gui.FindWindow(None, "Trackmania")

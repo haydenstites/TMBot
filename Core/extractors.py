@@ -6,7 +6,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.preprocessing import get_flattened_obs_dim, is_image_space
 from typing import Any, Dict, Optional
 
-def simple_CNN(n_input_channels):
+def _NatureCNN(n_input_channels):
     model = nn.Sequential(
         nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
         nn.ReLU(),
@@ -28,7 +28,7 @@ class CustomFrameExtractor(BaseFeaturesExtractor):
         model_kwargs = {} if model_kwargs is None else model_kwargs
 
         n_input_channels = observation_space.shape[0]
-        self.model = simple_CNN(n_input_channels) if model is None else model(n_input_channels, **model_kwargs)
+        self.model = _NatureCNN(n_input_channels) if model is None else model(n_input_channels, **model_kwargs)
 
         with torch.no_grad():
             n_flatten = self.model(torch.as_tensor(observation_space.sample()[None]).float()).shape[1]
@@ -65,7 +65,7 @@ class ExtCombinedExtractor(BaseFeaturesExtractor):
             encoded_tensor_list.append(extractor(observations[key]))
         return torch.cat(encoded_tensor_list, dim=1)
 
-def custom_extractor_policy(model : nn.Module = simple_CNN, model_kwargs : Optional[Dict[str, Any]] = None, frame_extractor : BaseFeaturesExtractor = CustomFrameExtractor):
+def custom_extractor_policy(model : nn.Module = _NatureCNN, model_kwargs : Optional[Dict[str, Any]] = None, frame_extractor : BaseFeaturesExtractor = CustomFrameExtractor):
     """Wrapper function for creating custom feature extractor for the :var:`frame` observation. Allows observation to be handled by a custom :meth:`nn.Module` object.
 
     Args:
