@@ -4,20 +4,29 @@ import time
 from gymnasium.spaces import Box, Discrete, MultiDiscrete
 from gymnasium.core import ActType
 from IO import get_observations, write_actions, write_alt
-from util import get_frame, get_default_op_path
+from util import get_frame, get_default_op_path, linear_interp
 from gui import TMGUI
 from typing import Any
 from pathlib import Path
 
 class TMBaseEnv(gym.Env):
     """Trackmania Base Environment, :meth:`reward` function can be overridden for custom implementations."""
-    def __init__(self, op_path : Path = None, frame_shape : tuple[int, int, int] = None, enabled : dict[str, bool] = None, rew_enabled : dict[str, bool] = None, sc_algorithm : str = "pywinauto", square_frame : bool = True, gui : bool = False, gui_kwargs : dict = None):
+    def __init__(self, 
+            op_path : Path = None, 
+            frame_shape : tuple[int, int, int] = None, 
+            enabled : dict[str, bool] = None, 
+            rew_enabled : dict[str, bool] = None, 
+            sc_algorithm : str = "pywinauto", 
+            square_frame : bool = True, 
+            gui : bool = False, 
+            gui_kwargs : dict[str, Any] = None
+        ):
         r"""Initialization parameters for TMBaseEnv. Parameters in enabled and rew_enabled should match output variables in TMData.
 
         Args:
             op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
 
-            frame_shape (tuple[int]) : Observation size of image frame passed to CNN, formatted (channels, height, width).
+            frame_shape (tuple[int, int, int]) : Observation size of image frame passed to CNN, formatted (channels, height, width).
             Must be at least (1, 36, 36). Default is (1, 50, 50).
 
             enabled (dict[str, bool]) : Dictionary describing enabled parameters in observation space. Default is True for every key.
@@ -30,6 +39,8 @@ class TMBaseEnv(gym.Env):
             square_frame (bool) : Crops observed frames to squares. Default is True.
 
             gui (bool) : Enables a tkinter GUI for additional training information. Default is False.
+
+            gui_kwargs (dict[str, Any]) : Keyword arguments for :meth:`TMGUI`.
         """
         self.op_path = get_default_op_path() if op_path is None else op_path
 
@@ -92,6 +103,8 @@ class TMBaseEnv(gym.Env):
 
         return obs, reward, terminated, truncated, info
 
+    # TODO: Max framerate (sleep between writing action and getting observation)
+    # TODO: Divide timestep reward by framerate (max framerate?)
     def reward(self, action : ActType, obs : dict[str, Any], rew_vars : dict[str, Any]) -> tuple[float, bool, bool, dict]:
         r"""Reward function for agent. Can be overridden for alternate implementations.
 
@@ -116,9 +129,9 @@ class TMBaseEnv(gym.Env):
 
         # Timestep based rewards:
 
-        ts_reward, goal_reward = -.15, 0 # Small negative reward per timestep
+        ts_reward, goal_reward = -.18, 0 # Small negative reward per timestep
 
-        vel_rm, w_rm = 1, 0.05
+        vel_rm, w_rm = 1.3, 0.05
         ts_reward += obs["velocity"][0] * vel_rm
         ts_reward += action[0] * w_rm
 
@@ -128,15 +141,33 @@ class TMBaseEnv(gym.Env):
 
         # Goal based rewards:
 
+        terminated = False
+
+        vel_threshold = 50
+        threshold_steps = 300
+        if obs["velocity"][0] > vel_threshold:
+            self.uns.setdefault("under_threshold", 0)
+            self.uns["under_threshold"] += 1
+            if self.uns["under_threshold"] >= threshold_steps:
+                goal_reward += -5
+                terminated = True
+        else:
+            self.uns["under_threshold"] = 0
+
         if self.uns["held_checkpoint"] < rew_vars["checkpoint"]:
             self.uns["held_checkpoint"] = rew_vars["checkpoint"]
 
             intercept = .6 # Reward ratio of first checkpoint to final
-            checkpoint_priority = ((rew_vars["checkpoint"] - 1) / (rew_vars["total_checkpoints"] - 1)) * (1 - intercept) + intercept
+            checkpoint_priority = linear_interp(value=rew_vars["checkpoint"], end=rew_vars["total_checkpoints"], intercept=intercept)
 
-            checkpoint_rm = 4 # Value of final checkpoint
-            goal_reward += checkpoint_priority * checkpoint_rm
-        
+            checkpoint_rmax = 6 # Value of final checkpoint
+            checkpoint_br = checkpoint_priority * checkpoint_rmax
+
+            checkpoint_vmax = 8 # Multiplier velocity reward
+            checkpoint_vr = min(obs["velocity"][0] * checkpoint_vmax, 3)
+
+            goal_reward += checkpoint_br + checkpoint_vr
+
         if rew_vars["race_state"] == 2: # Finish state
             goal_reward += 30
 
@@ -146,15 +177,15 @@ class TMBaseEnv(gym.Env):
             goal_reward += max((time_diff / 1000) * time_rm, -15) # Final reward cannot be too low
             
             terminated = True
-        elif rew_vars["top_contact"] == 1:
-            goal_reward += -3
-            terminated = True
-        elif rew_vars["bonk_time"] > self.uns["bonk_time"]:
-            self.uns["bonk_time"] = rew_vars["bonk_time"]
-            goal_reward += -4
-            terminated = True
-        else:
-            terminated = False
+        else: # Bonk and flip don't matter if finished
+            if rew_vars["top_contact"] == 1:
+                goal_reward += -3
+                terminated = True
+            if rew_vars["bonk_time"] > self.uns["bonk_time"]:
+                self.uns["bonk_time"] = rew_vars["bonk_time"]
+                goal_reward += -4
+                terminated = True
+            
 
         # Respawn timer
         if rew_vars["time"] < self.uns["start_time"] :

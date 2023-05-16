@@ -57,6 +57,10 @@ def _square_crop(image : Image.Image):
 def get_default_op_path():
     return Path(os.path.expanduser("~"), "OpenPlanetNext")
 
+def linear_interp(value : float, end : float, intercept : float = 0):
+    """Linearly interpolates between 0 and end with an intercept."""
+    return ((value - 1) / (end - 1)) * (1 - intercept) + intercept
+
 # Conversion util functions
 
 def norm_float(value : float, min : float, max : float) -> float:

@@ -6,7 +6,7 @@ from PIL import ImageTk, Image
 # TODO: percent steps held
 
 class TMGUI():
-    def __init__(self, env : gym.Env, enabled : dict[str, bool], rew_enabled : dict[str, bool], frame_size : tuple[int, int] = (500, 500), buffer_size : int = 10):
+    def __init__(self, env : gym.Env, enabled : dict[str, bool], rew_enabled : dict[str, bool], frame_size : tuple[int, int] = (500, 500), buffer_size : int = 30):
         self.env = env
         self.enabled = enabled
         self.rew_enabled = rew_enabled

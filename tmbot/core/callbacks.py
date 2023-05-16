@@ -29,23 +29,33 @@ class TMPauseOnUpdate(BaseCallback):
         # Required method, return False to abort training
         return True
     
-class TMSaveOnEpoch(BaseCallback):
-    """Saves model after each training epoch.
+class TMSaveOnEpochs(BaseCallback):
+    """Saves model after every n training epochs.
 
     Args:
         name (str) : Name of the model.
+        
+        n_epochs (int) : Frequency of model saving. Default is 1 (every epoch).
     """
 
-    def __init__(self, name : str = None, verbose=0):
+    def __init__(self, name : str = None, n_epochs : int = 1, verbose=0):
         super().__init__(verbose)
         self.name = self.locals["tb_log_name"] if name is None else name
-        self.epoch = 0
+        self.epoch_name = 0
         self.first_rollout = True
+
+        self.n_epochs = n_epochs
+        self.n = 0
 
     def _on_rollout_start(self) -> None:
         if not self.first_rollout:
-            self.epoch += 1
-            self.model.save(f"{self.name}_{self.epoch}")
+            self.epoch_name += 1
+            self.n += 1   
+
+            if self.n >= self.n_epochs:
+                self.model.save(f"{self.name}_{self.epoch_name}")
+
+                self.n = 0
         else:
             self.first_rollout = False
 

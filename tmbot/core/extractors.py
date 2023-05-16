@@ -6,6 +6,19 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.preprocessing import get_flattened_obs_dim, is_image_space
 from typing import Any, Dict, Optional
 
+def SimpleCNN(n_input_channels, layers : list[dict], activation = nn.ReLU()):
+    model = nn.Sequential()
+
+    for layer in layers:
+        model.append(nn.Conv2d(in_channels=n_input_channels, **layer))
+        model.append(activation)
+
+        n_input_channels = layer["out_channels"]
+
+    model.append(nn.Flatten())
+
+    return model
+
 def _NatureCNN(n_input_channels):
     model = nn.Sequential(
         nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
@@ -33,7 +46,7 @@ class CustomFrameExtractor(BaseFeaturesExtractor):
         with torch.no_grad():
             n_flatten = self.model(torch.as_tensor(observation_space.sample()[None]).float()).shape[1]
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
-        print(f"Initialized {self.model._get_name()} with {n_input_channels} input and {n_flatten} output features.")
+        print(f"Initialized {self.model._get_name()} with {n_input_channels} input and {n_flatten} output features, connected to {features_dim} output features.")
 
     def forward(self, observations):
         return self.linear(self.model(observations))
@@ -65,7 +78,7 @@ class ExtCombinedExtractor(BaseFeaturesExtractor):
             encoded_tensor_list.append(extractor(observations[key]))
         return torch.cat(encoded_tensor_list, dim=1)
 
-def custom_extractor_policy(model : nn.Module = _NatureCNN, model_kwargs : Optional[Dict[str, Any]] = None, frame_extractor : BaseFeaturesExtractor = CustomFrameExtractor):
+def custom_extractor_policy(model : nn.Module = _NatureCNN, model_kwargs : Optional[Dict[str, Any]] = None, frame_extractor : BaseFeaturesExtractor = CustomFrameExtractor, frame_output_dim = 512):
     """Wrapper function for creating custom feature extractor for the :var:`frame` observation. Allows observation to be handled by a custom :meth:`nn.Module` object.
 
     Args:
@@ -83,7 +96,7 @@ def custom_extractor_policy(model : nn.Module = _NatureCNN, model_kwargs : Optio
 
     policy_kwargs = dict(
         features_extractor_class=ExtCombinedExtractor,
-        features_extractor_kwargs=dict(frame_extractor=frame_extractor, model=model, model_kwargs=model_kwargs),
+        features_extractor_kwargs=dict(frame_extractor=frame_extractor, model=model, model_kwargs=model_kwargs, frame_output_dim=frame_output_dim),
     )
 
     return policy_kwargs
