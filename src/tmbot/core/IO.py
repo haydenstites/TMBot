@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from util import norm_float, binary_strbool, mat_index, race_index
+from .util import norm_float, binary_strbool, mat_index, race_index
 from pathlib import Path
 
 # Get all vars from TMData

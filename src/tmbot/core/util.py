@@ -3,15 +3,14 @@ import win32gui
 import win32ui
 import win32con
 import os
-import pyautogui
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageGrab
 
-def get_frame(shape : tuple[int, int], mode : str = "L", crop : bool = False, algorithm : str = "pywinauto"):
-    assert algorithm in ["pywinauto", "win32"]
+def get_frame(shape : tuple[int, int], mode : str = "L", crop : bool = False, algorithm : str = "imagegrab"):
+    assert algorithm in ["imagegrab", "win32"]
 
-    if algorithm == "pywinauto":
-        frame = pyautogui.screenshot()
+    if algorithm == "imagegrab":
+        frame = ImageGrab.grab()
     elif algorithm == "win32":
         frame = _screenshot()
 

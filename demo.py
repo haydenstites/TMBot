@@ -1,8 +1,8 @@
 import numpy as np
 import argparse
-from base import TMBaseEnv
-from callbacks import TMPauseOnUpdate, TMSaveOnEpochs, TMResetOnEpoch
-from extractors import custom_extractor_policy, SimpleCNN
+from tmbot.core import TMBaseEnv
+from tmbot.extras.callbacks import TMPauseOnUpdate, TMSaveOnEpochs, TMResetOnEpoch
+from tmbot.extras.extractors import custom_extractor_policy, SimpleCNN
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.callbacks import CallbackList
 
@@ -35,7 +35,7 @@ ppo_kwargs = dict(
     n_steps=1024,
     batch_size=256,
     ent_coef = 0.002,
-    gae_lambda=0.96,
+    gae_lambda=0.94, # Low on main training, higher on map_specific training
     #use_sde=True,
     verbose=1,
 )

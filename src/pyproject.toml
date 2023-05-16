@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "tmbot"
+version = "1.0.0"
+description = "A Reinforcement Learning (RL) package for Trackmania 2020"
+authors = ["Hayden Stites"]
+license = "MIT"
+repository = "https://github.com/Hayden-Stites/TMBot"
+classifiers = [
+    "Programming Language :: Python",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+gymnasium = "^0.28.1"
+numpy = "^1.24.3"
+pandas = "^2.0.1"
+pywin32 = "^306"
+pillow = "^9.5.0"
+stable-baselines3 = "^2.0.0a5"
+sb3-contrib = "^2.0.0a4"
+torch = "^2.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

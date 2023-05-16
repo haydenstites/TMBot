@@ -1,6 +1,6 @@
 from stable_baselines3.common.callbacks import BaseCallback
-from IO import write_alt
-from util import get_default_op_path
+from ..core.IO import write_alt
+from ..core.util import get_default_op_path
 from pathlib import Path
 
 class TMPauseOnUpdate(BaseCallback):
@@ -52,7 +52,7 @@ class TMSaveOnEpochs(BaseCallback):
             self.epoch_name += 1
             self.n += 1   
 
-            if self.n >= self.n_epochs:
+            if self.n >= self.n_epochs and self.name != "pytest":
                 self.model.save(f"{self.name}_{self.epoch_name}")
 
                 self.n = 0

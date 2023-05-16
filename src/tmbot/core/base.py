@@ -1,11 +1,11 @@
 import gymnasium as gym
 import numpy as np
 import time
+from .IO import get_observations, write_actions, write_alt
+from .util import get_frame, get_default_op_path, linear_interp
+from .gui import TMGUI
 from gymnasium.spaces import Box, Discrete, MultiDiscrete
 from gymnasium.core import ActType
-from IO import get_observations, write_actions, write_alt
-from util import get_frame, get_default_op_path, linear_interp
-from gui import TMGUI
 from typing import Any
 from pathlib import Path
 
@@ -16,7 +16,7 @@ class TMBaseEnv(gym.Env):
             frame_shape : tuple[int, int, int] = None, 
             enabled : dict[str, bool] = None, 
             rew_enabled : dict[str, bool] = None, 
-            sc_algorithm : str = "pywinauto", 
+            sc_algorithm : str = "imagegrab", 
             square_frame : bool = True, 
             gui : bool = False, 
             gui_kwargs : dict[str, Any] = None
@@ -33,8 +33,8 @@ class TMBaseEnv(gym.Env):
 
             rew_enabled (dict[str, bool]) : Dictionary describing enabled parameters for reward shaping. Default is True for every key.
 
-            sc_algorithm (str) : Whether to use "pywinauto" or "win32" screen capture algorithm. "win32" is faster
-            but requires the game to be windowed. Default is "pywinauto" for ease of use.
+            sc_algorithm (str) : Whether to use "imagegrab" or "win32" screen capture algorithm. "win32" is faster
+            but requires the game to be windowed. Default is "imagegrab" for ease of use.
 
             square_frame (bool) : Crops observed frames to squares. Default is True.
 
