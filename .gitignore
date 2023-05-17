@@ -10,3 +10,4 @@ x64/
 *.exp
 *.lib
 *.pdb
+*.user
