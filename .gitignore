@@ -2,3 +2,11 @@ __pycache__/
 dist/
 build/
 model/
+
+.vs/
+x64/
+!data/TMData/TMDataInputSys/x64
+
+*.exp
+*.lib
+*.pdb

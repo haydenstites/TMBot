@@ -1,0 +1,2 @@
+#define TMDATAINPUTSYS_API __declspec(dllexport)
+#define TMDATAINPUTSYS_API __declspec(dllimport)

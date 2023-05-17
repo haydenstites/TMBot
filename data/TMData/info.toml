@@ -1,0 +1,9 @@
+[meta]
+name = "TMData"
+author = "TBJ"
+category = "Testing"
+version = "0.0.1"
+
+[script]
+dependencies = [ "VehicleState", "CheckpointCounter", "bonk" ]
+timeout = 0
