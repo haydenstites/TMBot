@@ -3,21 +3,15 @@ import numpy as np
 from .util import norm_float, binary_strbool, mat_index, race_index
 from pathlib import Path
 
-# Get all vars from TMData
-def read_from_tmdata(op_path) -> list:
-    data_path = Path(op_path, r"PluginStorage\TMData\state.txt")
-    assert Path.exists(data_path), f"Path {data_path} does not exist."
-
-    f = pd.read_csv(data_path, header=None)
-
-    vars = []
-    for i in range(len(f)):
-        vars.append(f.transpose()[i].values[0])
-
-    return vars
-
 # Write actions to TMData
 def write_actions(op_path, action):
+    r"""Grabs observations from TMData.
+
+    Args:
+        op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
+
+        action (ActType) : Action to write to TMData.
+    """
     data_path = Path(op_path, r"PluginStorage\TMData\in.txt")
 
     # 0 : Negative, 1 : None, 2 : Positive
@@ -29,22 +23,51 @@ def write_actions(op_path, action):
 
 # Write reset/pause to TMData
 def write_alt(op_path, reset : bool = None, pause : bool = None):
+    r"""Writes data to TMData exchange file.
+
+    Args:
+        op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
+
+        reset (bool) : Buffers a reset to TMData.
+
+        pause (bool) : Buffers a pause to TMData.
+    """
     data_path = Path(op_path, r"PluginStorage\TMData\alt.txt")
     assert Path.exists(data_path), f"Path {data_path} does not exist."
 
     f = pd.read_csv(data_path, header=None)
 
-    if reset is not None:
+    if reset:
         data = pd.DataFrame([1, f.transpose()[1].values[0]])
-    elif pause is not None:
+    elif pause:
         data = pd.DataFrame([f.transpose()[0].values[0], 1])
 
     data.to_csv(data_path, index=False, header=False)
 
 # Read observations from TMData
 def get_observations(op_path, enabled : dict, rew_enabled : dict = None):
-    # TODO: Cleanup? May not be necessary
-    vars = read_from_tmdata(op_path)
+    r"""Grabs observations from TMData.
+
+    Args:
+        op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
+
+        enabled (dict[str, bool]) : Dictionary describing enabled parameters in observation space.
+
+        rew_enabled (dict[str, bool]) : Dictionary describing enabled parameters for reward shaping.
+    Returns:
+        obs (dict[str, Any]) : Observations in dict format.
+
+        rew_vars (dict[str, Any]) : Extra observations in dict format. Can be used for reward shaping.
+    """
+    data_path = Path(op_path, r"PluginStorage\TMData\state.txt")
+    assert Path.exists(data_path), f"Path {data_path} does not exist."
+
+    f = pd.read_csv(data_path, header=None)
+
+    vars = []
+    for i in range(len(f)):
+        vars.append(f.transpose()[i].values[0])
+
     obs = {}
 
     if enabled["velocity"]:

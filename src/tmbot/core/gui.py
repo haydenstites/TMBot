@@ -6,12 +6,26 @@ from PIL import ImageTk, Image
 # TODO: percent steps held
 
 class TMGUI():
-    def __init__(self, env : gym.Env, enabled : dict[str, bool], rew_enabled : dict[str, bool], frame_size : tuple[int, int] = (500, 500), buffer_size : int = 30):
-        self.env = env
+    def __init__(self, enabled : dict[str, bool], rew_enabled : dict[str, bool], frame_size : tuple[int, int] = (500, 500), buffer_size : int = 30, env : gym.Env = None):
+        r"""Initialization parameters for TMGUI. TMBaseEnv automatically wraps this.
+
+        Args:
+            enabled (dict[str, bool]) : Dictionary describing enabled parameters in observation space.
+
+            rew_enabled (dict[str, bool]) : Dictionary describing enabled parameters for reward shaping.
+
+            frame_size (tuple[int, int]) : Displayed frame size in pixels. Default is (500, 500).
+
+            buffer_size (int) : Buffer steps for rewards to smooth displayed reward values. Default is 30 (steps).
+
+            env (gym.Env, Optional) : A gymnasium environment that must be assigned if linked to a :class:`TMBaseEnv` object.
+
+        """
         self.enabled = enabled
         self.rew_enabled = rew_enabled
         self.frame_size = frame_size
         self.buffer_size = buffer_size
+        self.env = env
         self.uns = {}
 
         if type(self.buffer_size) is int and self.buffer_size > 0:
@@ -128,5 +142,6 @@ class TMGUI():
         self.uns["goal_buffer"] = []
 
     def _close_gui(self):
-        self.env.gui = False
+        if self.env is not None:
+            self.env.gui = False
         self.window.destroy()

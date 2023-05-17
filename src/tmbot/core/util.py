@@ -6,7 +6,21 @@ import os
 from pathlib import Path
 from PIL import Image, ImageGrab
 
-def get_frame(shape : tuple[int, int], mode : str = "L", crop : bool = False, algorithm : str = "imagegrab"):
+def get_frame(shape : tuple[int, int], mode : str = "L", crop : bool = True, algorithm : str = "imagegrab"):
+    r"""Preprocesses and grabs frame using either "imagegrab" or "win32" algorithm.
+
+    Args:
+        shape (tuple[int, int]) : Downsampled size of frame.
+
+        mode (str) : Image mode, corresponds to the amount of frame channels.
+            Can be either "L" (grayscale, 1 channel), or "RGB" (color, 3 channels). Default is "L".
+
+        crop (bool) : Crops frame to a square, anchored in the center. Default is True.
+
+        algorithm (str) : Whether to use "imagegrab" or "win32" screen capture algorithm. "win32" is faster
+            but requires the game to be windowed. Default is "imagegrab" for ease of use. Default is "imagegrab".
+
+    """
     assert algorithm in ["imagegrab", "win32"]
 
     if algorithm == "imagegrab":

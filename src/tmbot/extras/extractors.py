@@ -6,31 +6,31 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.preprocessing import get_flattened_obs_dim, is_image_space
 from typing import Any, Dict, Optional
 
-def SimpleCNN(n_input_channels, layers : list[dict], activation = nn.ReLU()):
-    model = nn.Sequential()
+# TODO: Doc extrators
 
-    for layer in layers:
-        model.append(nn.Conv2d(in_channels=n_input_channels, **layer))
-        model.append(activation)
+class SimpleCNN(nn.Module):
+    def __init__(self, n_input_channels, layers : list[dict], activation = nn.ReLU()):
+        super().__init__()
+        self.model = nn.Sequential()
 
-        n_input_channels = layer["out_channels"]
+        for layer in layers:
+            self.model.append(nn.Conv2d(in_channels=n_input_channels, **layer))
+            self.model.append(activation)
 
-    model.append(nn.Flatten())
+            n_input_channels = layer["out_channels"]
 
-    return model
+        self.model.append(nn.Flatten())
 
-def _NatureCNN(n_input_channels):
-    model = nn.Sequential(
-        nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
-        nn.ReLU(),
-        nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
-        nn.ReLU(),
-        nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
-        nn.ReLU(),
-        nn.Flatten(),
-    )
+    def forward(self, x):
+        return self.model(x)
 
-    return model
+_NatureCNN_kwargs = dict(
+    layers = [
+        dict(out_channels = 32, kernel_size=8, stride=4, padding=0),
+        dict(out_channels = 64, kernel_size=4, stride=2, padding=0),
+        dict(out_channels = 64, kernel_size=3, stride=1, padding=0),
+    ]
+)
 
 class CustomFrameExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.Space, features_dim: int = 512, normalized_image: bool = False, model : nn.Module = None, model_kwargs : Optional[Dict[str, Any]] = None):
@@ -38,10 +38,11 @@ class CustomFrameExtractor(BaseFeaturesExtractor):
         assert is_image_space(observation_space, check_channels=False, normalized_image=normalized_image)
         super().__init__(observation_space, features_dim)
 
-        model_kwargs = {} if model_kwargs is None else model_kwargs
+        model_kwargs = _NatureCNN_kwargs if model_kwargs is None else model_kwargs
+        model = SimpleCNN if model is None else model
 
         n_input_channels = observation_space.shape[0]
-        self.model = _NatureCNN(n_input_channels) if model is None else model(n_input_channels, **model_kwargs)
+        self.model = model(n_input_channels, **model_kwargs)
 
         with torch.no_grad():
             n_flatten = self.model(torch.as_tensor(observation_space.sample()[None]).float()).shape[1]
@@ -52,7 +53,7 @@ class CustomFrameExtractor(BaseFeaturesExtractor):
         return self.linear(self.model(observations))
     
 class ExtCombinedExtractor(BaseFeaturesExtractor):
-    """Modified :meth:`CombinedExtractor` to be used with :meth:`MultiInputPolicy` allowing for custom frame space models."""
+    """Modified :meth:`CombinedExtractor` to be used with `MultiInputPolicy` allowing for custom frame space models."""
     def __init__(self, observation_space : spaces.Dict, frame_output_dim : int = 256, normalized_image : bool = False, frame_extractor : BaseFeaturesExtractor = CustomFrameExtractor, model : nn.Module = None, model_kwargs : Optional[Dict[str, Any]] = None):
         super().__init__(observation_space, features_dim=1)
 
@@ -78,7 +79,7 @@ class ExtCombinedExtractor(BaseFeaturesExtractor):
             encoded_tensor_list.append(extractor(observations[key]))
         return torch.cat(encoded_tensor_list, dim=1)
 
-def custom_extractor_policy(model : nn.Module = _NatureCNN, model_kwargs : Optional[Dict[str, Any]] = None, frame_extractor : BaseFeaturesExtractor = CustomFrameExtractor, frame_output_dim = 512):
+def custom_extractor_policy(model : nn.Module = SimpleCNN, model_kwargs : Optional[Dict[str, Any]] = None, frame_extractor : BaseFeaturesExtractor = CustomFrameExtractor, frame_output_dim = 512):
     """Wrapper function for creating custom feature extractor for the :var:`frame` observation. Allows observation to be handled by a custom :meth:`nn.Module` object.
 
     Args:

@@ -27,20 +27,20 @@ class TMBaseEnv(gym.Env):
             op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
 
             frame_shape (tuple[int, int, int]) : Observation size of image frame passed to CNN, formatted (channels, height, width).
-            Must be at least (1, 36, 36). Default is (1, 50, 50).
+                Must be at least (1, 36, 36). Default is (1, 50, 50).
 
             enabled (dict[str, bool]) : Dictionary describing enabled parameters in observation space. Default is True for every key.
 
             rew_enabled (dict[str, bool]) : Dictionary describing enabled parameters for reward shaping. Default is True for every key.
 
             sc_algorithm (str) : Whether to use "imagegrab" or "win32" screen capture algorithm. "win32" is faster
-            but requires the game to be windowed. Default is "imagegrab" for ease of use.
+                but requires the game to be windowed. Default is "imagegrab" for ease of use.
 
             square_frame (bool) : Crops observed frames to squares. Default is True.
 
-            gui (bool) : Enables a tkinter GUI for additional training information. Default is False.
+            gui (bool) : Enables a tkinter GUI for viewing training information. Default is False.
 
-            gui_kwargs (dict[str, Any]) : Keyword arguments for :meth:`TMGUI`.
+            gui_kwargs (dict[str, Any]) : Keyword arguments for :class:`TMGUI`.
         """
         self.op_path = get_default_op_path() if op_path is None else op_path
 
@@ -87,7 +87,7 @@ class TMBaseEnv(gym.Env):
 
         gui_kwargs = {} if gui_kwargs is None else gui_kwargs
         if self.gui:
-            self.window = TMGUI(self, self.enabled, self.rew_enabled, **gui_kwargs)
+            self.window = TMGUI(enabled=self.enabled, rew_enabled=self.rew_enabled, env=self, **gui_kwargs)
 
     def step(self, action):
         write_actions(self.op_path, action)
@@ -111,17 +111,17 @@ class TMBaseEnv(gym.Env):
         Args:
             action (ActType) : Action passed to agent during :meth:`step`.
         
-            obs (dict[str, Any]) : Observations given by TMBaseEnv during :meth:`step`, not supplied by user. Key is str definition of variable.
+            obs (dict[str, Any]) : Observations given by :class:`TMBaseEnv` during :meth:`step`, not supplied by user. Key is str definition of variable.
 
-            rew_vars (dict[str, Any]) : Observations given by TMBaseEnv during :meth:`step` not directly used in training of model, not supplied by user. 
-            May still be useful for reward shaping. Key is str definition of variable.
+            rew_vars (dict[str, Any]) : Extra observations given by :class:`TMBaseEnv` during :meth:`step` not directly used in training of model, not supplied by user.
+                May still be useful for reward shaping. Key is str definition of variable.
         
         Returns:
             reward (float) : Reward value given to model for given timestep.
 
             terminated (bool) : Set to True to "reset" enviroment. Call when agent reaches terminal state.
 
-            truncated (bool) : Set to True to "reset" environment for external reasons e.g. :meth:`TimeLimit` wrapper.
+            truncated (bool) : Set to True to "reset" environment for external reasons e.g. `TimeLimit` wrapper.
 
             info (dict) : Debug information. Can be returned as empty dict if unused.
         """

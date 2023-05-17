@@ -1,4 +1,4 @@
-from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 from ..core.IO import write_alt
 from ..core.util import get_default_op_path
 from pathlib import Path
@@ -83,3 +83,5 @@ class TMResetOnEpoch(BaseCallback):
             write_alt(self.op_path, reset=True)
             self.epoch_changed = False
         return True
+    
+default_callbacks = CallbackList([TMPauseOnUpdate(), TMResetOnEpoch(), TMSaveOnEpochs(name="TMBot", n_epochs=5)])

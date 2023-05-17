@@ -17,16 +17,6 @@ cnn_kwargs = dict( # Increase frame resolution and kernel_size, increase CNN cha
     ]
 )
 
-# frame_shape = (3, 64, 64) # Channels, height, width
-
-# cnn_kwargs = dict( # Increase frame resolution and kernel_size, increase CNN channels 
-#     layers = [
-#         dict(out_channels = 32, kernel_size=8, stride=4, padding=0),
-#         dict(out_channels = 64, kernel_size=4, stride=2, padding=0),
-#         dict(out_channels = 64, kernel_size=3, stride=1, padding=0),
-#     ]
-# )
-
 policy_kwargs = custom_extractor_policy(SimpleCNN, cnn_kwargs)
 policy_kwargs["net_arch"] = [512, 512, 256, 256]
 
