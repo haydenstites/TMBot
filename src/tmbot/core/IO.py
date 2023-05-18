@@ -1,11 +1,63 @@
 import pandas as pd
 import numpy as np
+import os
+import wget
 from .util import norm_float, binary_strbool, mat_index, race_index
 from pathlib import Path
 
+def init_tmdata(op_path):
+    print("Setting up TMData...")
+    init = False
+
+    # Folder
+    data_path = Path(op_path, "PluginStorage/TMData")
+    if not os.path.exists(data_path):
+        print(f"Path {data_path} does not exist, creating...")
+        os.mkdir(data_path)
+        init = True
+
+    # Files
+    for file in ["in.txt", "alt.txt", "state.txt"]:
+        file_path = Path(data_path, file)
+        if not os.path.exists(file_path):
+            if file == "in.txt":
+                data = pd.DataFrame([0, 0])
+                data.to_csv(file_path, index=False, header=False)
+            else:
+                print(f"File {file_path} does not exist, TMData must be run before using TMBot.")
+                init = True
+
+    # Plugin
+    plugin_path = Path(op_path, "Plugins/TMData.op")
+    if not os.path.exists(plugin_path):
+        print(f"File {plugin_path} does not exist, downloading...")
+
+        url = "https://github.com/Hayden-Stites/TMBot/raw/master/data/TMData.op"
+        file = wget.download(url, out=str(plugin_path))
+
+        print("Downloaded TMData.op")
+        init = True
+    
+    # Dll
+    dll_path = Path(data_path, "TMDataInputSys.dll")
+    if not os.path.exists(dll_path):
+        print(f"File {dll_path} does not exist, downloading...")
+
+        url = "https://github.com/Hayden-Stites/TMBot/raw/master/data/TMData/TMDataInputSys/x64/Debug/TMDataInputSys.dll"
+        file = wget.download(url, out=str(dll_path))
+
+        print("Downloaded TMDataInputSys.dll")
+        init = True
+
+
+    assert not init, (
+    f"""TMData and all necessary files are downloaded to OpenPlanet path {op_path}.
+    Trackmania must be run with the TMData plugin before TMBot will function properly."""
+    )
+
 # Write actions to TMData
 def write_actions(op_path, action):
-    r"""Grabs observations from TMData.
+    r"""Writes actions to TMData.
 
     Args:
         op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".

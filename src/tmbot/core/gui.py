@@ -43,17 +43,17 @@ class TMGUI():
 
         sys_font = ("System", 0)
 
-        # bar
+        # Menu
         self.exit = tk.Button(master=self.window, text="Close GUI", command=self._close_gui, font=sys_font)
         self.exit.grid(row=0, column=0, sticky="w")
 
-        # frame
+        # Frame
         if enabled["frame"]:
             frame_tk = ImageTk.PhotoImage(Image.new(mode="RGB", size=env.frame_shape[1:]).resize(self.frame_size))
             self.frame_display = tk.Label(image=frame_tk, relief=tk.RIDGE, borderwidth=5)
             self.frame_display.grid(row=1, column=0)
 
-        # reward
+        # Reward
         self.reward_frame = tk.Frame(master=self.window)
         self.reward_frame.grid(row=2, column=0, sticky="w", padx=20, pady=10)
 
@@ -62,11 +62,11 @@ class TMGUI():
         self.goal_reward = tk.Label(master=self.reward_frame, text="goal_reward: NA", font=sys_font)
         self.goal_reward.grid(row=0, column=1, padx=20)
 
-        # obs/extra container
+        # Obs/Extra Container
         self.text_frame = tk.Frame(master=self.window, relief=tk.GROOVE, borderwidth=5)
         self.text_frame.grid(row=3, column=0, sticky="nsew")
 
-        # obs
+        # Obs
         self.obs_frame = tk.Frame(master=self.text_frame)
         self.obs_frame.grid(row=0, column=0, sticky=tk.N)
         self.text_frame.columnconfigure(index=0, weight=1, minsize=200)
@@ -81,7 +81,7 @@ class TMGUI():
         self.obs = tk.Label(master=self.obs_frame, text=obs_text, font=sys_font)
         self.obs.pack()
 
-        # extra
+        # Extra
         self.extra_frame = tk.Frame(master=self.text_frame, relief=tk.GROOVE)
         self.extra_frame.grid(row=0, column=1, sticky=tk.N)
         self.text_frame.columnconfigure(index=1, weight=1, minsize=200)
@@ -99,14 +99,14 @@ class TMGUI():
         self.window.update()
 
     def update(self, obs, rew_vars, ts_reward, goal_reward):
-        # frame
+        # Frame
         if obs["frame"] is not None:
             image = Image.fromarray(obs["frame"].transpose()).resize(self.frame_size, resample=Image.Resampling.NEAREST)
             frame_tk = ImageTk.PhotoImage(image)
             self.frame_display.config(image=frame_tk)
             self.frame_display.image = frame_tk
 
-        # reward
+        # Reward
         if self.buffer_size > 0:
             assert len(self.uns["ts_buffer"]) == len(self.uns["goal_buffer"])
 
@@ -122,14 +122,14 @@ class TMGUI():
         self.ts_reward.config(text=f"ts_reward: {round(ts_reward, 4)}")
         self.goal_reward.config(text=f"goal_reward: {goal_reward}")
 
-        # obs
+        # Obs
         obs_text = str()
         for key in obs:
             if key != "frame":
                 obs_text += f"{key}: {np.round(obs[key], 2)}\n"
         self.obs.config(text=obs_text)
 
-        # extra
+        # Extra
         extra_text = str()
         for key in rew_vars:
             extra_text += f"{key}: {rew_vars[key]}\n"

@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 import time
-from .IO import get_observations, write_actions, write_alt
+from .IO import init_tmdata, get_observations, write_actions, write_alt
 from .util import get_frame, get_default_op_path, linear_interp
 from .gui import TMGUI
 from gymnasium.spaces import Box, Discrete, MultiDiscrete
@@ -43,6 +43,7 @@ class TMBaseEnv(gym.Env):
             gui_kwargs (dict[str, Any]) : Keyword arguments for :class:`TMGUI`.
         """
         self.op_path = get_default_op_path() if op_path is None else op_path
+        init_tmdata(self.op_path)
 
         min_frame_shape = (1, 36, 36)
         default_frame_shape = (1, 50, 50)

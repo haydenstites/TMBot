@@ -67,6 +67,7 @@ def _square_crop(image : Image.Image):
         image = image.crop([0, offset, width, height-offset])
     return image
 
+
 def get_default_op_path():
     return Path(os.path.expanduser("~"), "OpenPlanetNext")
 
