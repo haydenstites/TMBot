@@ -19,6 +19,7 @@ environment than most commonly used alternatives, such as `Atari environments <h
    :caption: User Guide
 
    tutorial/start
+   tutorial/basic
 
 |
 

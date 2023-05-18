@@ -60,7 +60,7 @@ def predict_demo(model_path : str, steps : int = 1e5, save_epochs : int = 3, gui
         episode_starts = dones
 
 if __name__ == "__main__":
-    description = "Run sample implementations of TMBot."
+    description = "Run sample implementations of TMBot"
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument("-p", "--Predict", nargs="?", type=bool, default=False, const=True, help="Run predict loop instead of train loop")

@@ -34,4 +34,3 @@ Methods
    from tmbot.extras.callbacks import default_callbacks
 
 .. autofunction:: tmbot.extras.callbacks.default_callbacks
-

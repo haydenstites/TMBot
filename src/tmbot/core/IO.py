@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 import os
 import wget
-from .util import norm_float, binary_strbool, mat_index, race_index
+from .util import norm_float, binary_strbool, mat_index, race_index, get_default_op_path
 from pathlib import Path
 
-def init_tmdata(op_path):
+def init_tmdata(op_path = None):
     r"""Checks if all TMData files are present, and downloads them if any aren't.
 
     Args:
@@ -13,6 +13,8 @@ def init_tmdata(op_path):
     """
     print("Setting up TMData...")
     init = False
+
+    op_path = get_default_op_path() if op_path is None else op_path
 
     # Folder
     data_path = Path(op_path, "PluginStorage/TMData")

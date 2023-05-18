@@ -26,4 +26,3 @@ Methods
    from tmbot.extras.extractors import SimpleCNN
 
 .. autofunction:: tmbot.extras.extractors.SimpleCNN.__init__
-

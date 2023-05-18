@@ -83,6 +83,10 @@ class TMResetOnEpoch(BaseCallback):
             self.epoch_changed = False
         return True
 
-def default_callbacks():
-    """Returns recommended callbacks for training."""
-    return CallbackList([TMPauseOnUpdate(), TMResetOnEpoch(), TMSaveOnEpochs(name="TMBot", n_epochs=5)])
+def default_callbacks(op_path : Path = None):
+    """Returns recommended callbacks for training.
+
+    Args:
+        op_path (Path) : Path to Openplanet installation folder. Default is "C:/Users/NAME/OpenplanetNext".
+    """
+    return CallbackList([TMPauseOnUpdate(op_path), TMResetOnEpoch(op_path), TMSaveOnEpochs(name="TMBot", n_epochs=5)])
