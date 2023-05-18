@@ -8,6 +8,14 @@ Methods
 ------------
 .. code-block:: python
 
+   from tmbot.core import init_tmdata
+
+.. autofunction:: tmbot.core.IO.init_tmdata
+
+|
+
+.. code-block:: python
+
    from tmbot.core import write_actions
 
 .. autofunction:: tmbot.core.IO.write_actions

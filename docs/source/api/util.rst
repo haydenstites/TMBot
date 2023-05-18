@@ -11,3 +11,11 @@ Methods
    from tmbot.core import get_frame
 
 .. autofunction:: tmbot.core.util.get_frame
+
+|
+
+.. code-block:: python
+
+   from tmbot.core import get_default_op_path
+
+.. autofunction:: tmbot.core.util.get_default_op_path
