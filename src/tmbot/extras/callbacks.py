@@ -4,12 +4,12 @@ from ..core.util import get_default_op_path
 from pathlib import Path
 
 class TMPauseOnUpdate(BaseCallback):
-    r"""Pauses game execution when updating model.
-
-    Args:
-        op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
-    """
     def __init__(self, op_path : Path = None, verbose=0):
+        r"""Pauses game execution when updating model.
+
+        Args:
+            op_path (Path) : Path to Openplanet installation folder. Default is "C:/Users/NAME/OpenplanetNext".
+        """
         super().__init__(verbose)
         self.op_path = get_default_op_path() if op_path is None else op_path
         self.first_rollout = True
@@ -30,15 +30,14 @@ class TMPauseOnUpdate(BaseCallback):
         return True
     
 class TMSaveOnEpochs(BaseCallback):
-    """Saves model after every n training epochs.
-
-    Args:
-        name (str) : Name of the model.
-        
-        n_epochs (int) : Frequency of model saving. Default is 1 (every epoch).
-    """
-
     def __init__(self, name : str = None, n_epochs : int = 1, verbose=0):
+        """Saves model after every n training epochs.
+
+        Args:
+            name (str) : Name of the model.
+        
+            n_epochs (int) : Frequency of model saving. Default is 1 (every epoch).
+        """
         super().__init__(verbose)
         self.name = self.locals["tb_log_name"] if name is None else name
         self.epoch_name = 0
@@ -52,7 +51,7 @@ class TMSaveOnEpochs(BaseCallback):
             self.epoch_name += 1
             self.n += 1   
 
-            if self.n >= self.n_epochs and self.name != "pytest":
+            if self.n >= self.n_epochs:
                 self.model.save(f"{self.name}_{self.epoch_name}")
 
                 self.n = 0
@@ -64,12 +63,12 @@ class TMSaveOnEpochs(BaseCallback):
         return True
     
 class TMResetOnEpoch(BaseCallback):
-    r"""Resets agent after each training epoch.
-
-    Args:
-        op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
-    """
     def __init__(self, op_path : Path = None, verbose=0):
+        r"""Resets agent after each training epoch.
+
+        Args:
+            op_path (Path) : Path to Openplanet installation folder. Default is "C:/Users/NAME/OpenplanetNext".
+        """
         super().__init__(verbose)
         self.op_path = get_default_op_path() if op_path is None else op_path
         self.epoch_changed = False
@@ -83,5 +82,7 @@ class TMResetOnEpoch(BaseCallback):
             write_alt(self.op_path, reset=True)
             self.epoch_changed = False
         return True
-    
-default_callbacks = CallbackList([TMPauseOnUpdate(), TMResetOnEpoch(), TMSaveOnEpochs(name="TMBot", n_epochs=5)])
+
+def default_callbacks():
+    """Returns recommended callbacks for training."""
+    return CallbackList([TMPauseOnUpdate(), TMResetOnEpoch(), TMSaveOnEpochs(name="TMBot", n_epochs=5)])

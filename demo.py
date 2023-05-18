@@ -30,20 +30,20 @@ ppo_kwargs = dict(
     verbose=1,
 )
 
-def _setup(model_path : str, n_epochs : int, gui : bool):
-    env = TMBaseEnv(frame_shape = frame_shape, gui = gui)
+def _setup(op_path : str, n_epochs : int, gui : bool, model_path : str = None):
+    env = TMBaseEnv(op_path=op_path, frame_shape = frame_shape, gui = gui)
     model = RecurrentPPO("MultiInputLstmPolicy", env, policy_kwargs=policy_kwargs, **ppo_kwargs) # TODO: Hyperparameter optimization
     callbacks = CallbackList([TMPauseOnUpdate(), TMResetOnEpoch(), TMSaveOnEpochs(model_path, n_epochs)])
 
     return env, model, callbacks
 
-def train_demo(steps : int, model_path : str, n_epochs : int, gui : bool):
-    env, model, callbacks = _setup(model_path, n_epochs, gui)
+def train_demo(model_path : str = None, steps : int = 1e5, save_epochs : int = 3, gui : bool = False, op_path : str = None):
+    env, model, callbacks = _setup(op_path, save_epochs, gui, model_path)
 
     model.learn(total_timesteps=steps, callback=callbacks, progress_bar=True)
 
-def predict_demo(steps : int, model_path : str, n_epochs : int, gui : bool):
-    env, model, callbacks = _setup(model_path, n_epochs, gui)
+def predict_demo(model_path : str, steps : int = 1e5, save_epochs : int = 3, gui : bool = False, op_path : str = None):
+    env, model, callbacks = _setup(op_path, save_epochs, gui, model_path)
 
     model = model.load(model_path, env=env)
 
@@ -63,16 +63,17 @@ if __name__ == "__main__":
     description = "Run sample implementations of TMBot."
     parser = argparse.ArgumentParser(description=description)
 
-    parser.add_argument("-s", "--Steps", nargs="?", type=int, default=1e5, help="Number of train or predict steps")
     parser.add_argument("-p", "--Predict", nargs="?", type=bool, default=False, const=True, help="Run predict loop instead of train loop")
-    parser.add_argument("-g", "--GUI", nargs="?", type=bool, default=False, const=True, help="Enable GUI")
-    parser.add_argument("-o", "--Output", nargs="?", type=str, default=None, help="Path for saving or loading a model")
+    parser.add_argument("-m", "--Model", nargs="?", type=str, default=None, help="Path for saving or loading a model")
+    parser.add_argument("-s", "--Steps", nargs="?", type=int, default=1e5, help="Number of train or predict steps")
     parser.add_argument("-f", "--Frequency", nargs="?", type=int, default=3, help="Frequency of model saves by epoch")
+    parser.add_argument("-g", "--GUI", nargs="?", type=bool, default=False, const=True, help="Enable GUI")
+    parser.add_argument("-o", "--OpenPlanet", nargs="?", type=str, default=None, help="OpenPlanet install location")
 
     args = parser.parse_args()
 
-    model_path = "model/TMBot" if args.Output is None else args.Output
-    kwargs = dict(steps=args.Steps, model_path=model_path, n_epochs=args.Frequency, gui=args.GUI)
+    model_path = "model/TMBot" if args.Model is None else args.Model
+    kwargs = dict(model_path=model_path, steps=args.Steps, save_epochs=args.Frequency, gui=args.GUI, op_path=args.OpenPlanet)
 
     if args.Predict:
         predict_demo(**kwargs)

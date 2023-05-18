@@ -9,7 +9,16 @@ from typing import Any, Dict, Optional
 # TODO: Doc extrators
 
 class SimpleCNN(nn.Module):
-    def __init__(self, n_input_channels, layers : list[dict], activation = nn.ReLU()):
+    def __init__(self, n_input_channels : int, layers : list[dict], activation : nn.Module = nn.ReLU()):
+        """Simple CNN architecture with customizable attributes. Not intended to be invoked directly, done by :class:`ExtCombinedExtractor`.
+        
+        Args:
+            n_input_channels (int) : Number of input channels.
+
+            layers (list[dict]) : A list where each element corresponds to `nn.Conv2d` keyword arguments.
+
+            activation (nn.Module) : Activation function between each convolutional layer.
+        """
         super().__init__()
         self.model = nn.Sequential()
 
@@ -53,8 +62,22 @@ class CustomFrameExtractor(BaseFeaturesExtractor):
         return self.linear(self.model(observations))
     
 class ExtCombinedExtractor(BaseFeaturesExtractor):
-    """Modified :meth:`CombinedExtractor` to be used with `MultiInputPolicy` allowing for custom frame space models."""
     def __init__(self, observation_space : spaces.Dict, frame_output_dim : int = 256, normalized_image : bool = False, frame_extractor : BaseFeaturesExtractor = CustomFrameExtractor, model : nn.Module = None, model_kwargs : Optional[Dict[str, Any]] = None):
+        """Modified :meth:`CombinedExtractor` to be used with `MultiInputPolicy` allowing for custom frame space models.
+
+        Args:
+            observation_space (spaces.Dict) : Dictionary observation space to be used.
+
+            frame_output_dim (int) : Output features of frame feature extractor. Default is 256.
+
+            normalized_image (bool) : Whether image is already normalized. Default is False.
+
+            frame_extractor (BaseFeaturesExtractor) : Feature extractor for frame observation. Default is CustomFrameExtractor.
+
+            model (nn.Module) : Model for frame feature extraction. A CNN is recommended. Default is `NatureCNN`.
+
+            model_kwargs (dict[str, Any]) : Keyword arguments for frame extractor model. Default is None.
+        """
         super().__init__(observation_space, features_dim=1)
 
         extractors = {}
@@ -80,15 +103,15 @@ class ExtCombinedExtractor(BaseFeaturesExtractor):
         return torch.cat(encoded_tensor_list, dim=1)
 
 def custom_extractor_policy(model : nn.Module = SimpleCNN, model_kwargs : Optional[Dict[str, Any]] = None, frame_extractor : BaseFeaturesExtractor = CustomFrameExtractor, frame_output_dim = 512):
-    """Wrapper function for creating custom feature extractor for the :var:`frame` observation. Allows observation to be handled by a custom :meth:`nn.Module` object.
+    """Wrapper function for creating custom feature extractor for the frame observation. Allows observation to be handled by a custom `nn.Module` object.
 
     Args:
-        model (nn.Module) : Function returning :meth:`nn.Module` object given :int:`n_input_channels`. Used by :meth:`CustomFrameExtractor` by default to extract data from frame observation space.
-        May or may not be used by custom implementations. By default returns :meth:`NatureCNN` as defined by SB3.
+        model (nn.Module) : Function returning `nn.Module` object given `n_input_channels`. Used by :class:`CustomFrameExtractor` by default to extract data from frame observation space.
+            May or may not be used by custom implementations. By default returns `NatureCNN` as defined by SB3.
 
         model_kwargs (dict[str, Any]) : Keyword arguments passed to model.
 
-        frame_extractor (BaseFeaturesExtractor) : Features extractor extracting data from frame observation space. :meth:`CustomFrameExtractor` by default.
+        frame_extractor (BaseFeaturesExtractor) : Features extractor extracting data from frame observation space. :class:`CustomFrameExtractor` by default.
 
     Returns:
         policy_kwargs (dict[str, Any]) : Keyword arguments for policy.

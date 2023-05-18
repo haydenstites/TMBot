@@ -1,8 +1,8 @@
 [meta]
 name = "TMData"
+version = "1.0.0"
 author = "TBJ"
-category = "Testing"
-version = "0.0.1"
+category = "Utilities"
 
 [script]
 dependencies = [ "VehicleState", "CheckpointCounter", "bonk" ]

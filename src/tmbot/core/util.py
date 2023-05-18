@@ -69,6 +69,7 @@ def _square_crop(image : Image.Image):
 
 
 def get_default_op_path():
+    """Gets default OpenPlanet installation path."""
     return Path(os.path.expanduser("~"), "OpenPlanetNext")
 
 def linear_interp(value : float, end : float, intercept : float = 0):

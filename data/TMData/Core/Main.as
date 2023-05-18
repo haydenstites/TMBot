@@ -1,4 +1,3 @@
-// string path_dll = IO::FromDataFolder("Plugins\\TMData\\TMDataInputSys\\x64\\Debug\\TMDataInputSys.dll");
 string path_dll = IO::FromDataFolder("PluginStorage\\TMData\\TMDataInputSys.dll");
 Import::Library@ inputSys = Import::GetLibrary(path_dll);
 Import::Function@ SpoofKeys = inputSys.GetFunction("SpoofKeys"); // in : (bool w, bool a, bool s, bool d)

@@ -24,7 +24,7 @@ class TMBaseEnv(gym.Env):
         r"""Initialization parameters for TMBaseEnv. Parameters in enabled and rew_enabled should match output variables in TMData.
 
         Args:
-            op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
+            op_path (Path) : Path to Openplanet installation folder. Default is "C:/Users/NAME/OpenplanetNext".
 
             frame_shape (tuple[int, int, int]) : Observation size of image frame passed to CNN, formatted (channels, height, width).
                 Must be at least (1, 36, 36). Default is (1, 50, 50).
@@ -144,9 +144,9 @@ class TMBaseEnv(gym.Env):
 
         terminated = False
 
-        vel_threshold = 50
+        vel_threshold = .05
         threshold_steps = 300
-        if obs["velocity"][0] > vel_threshold:
+        if obs["velocity"][0] < vel_threshold:
             self.uns.setdefault("under_threshold", 0)
             self.uns["under_threshold"] += 1
             if self.uns["under_threshold"] >= threshold_steps:

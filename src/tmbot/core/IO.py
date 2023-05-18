@@ -6,6 +6,11 @@ from .util import norm_float, binary_strbool, mat_index, race_index
 from pathlib import Path
 
 def init_tmdata(op_path):
+    r"""Checks if all TMData files are present, and downloads them if any aren't.
+
+    Args:
+        op_path (Path) : Path to Openplanet installation folder. Default is "C:/Users/NAME/OpenplanetNext".
+    """
     print("Setting up TMData...")
     init = False
 
@@ -60,7 +65,7 @@ def write_actions(op_path, action):
     r"""Writes actions to TMData.
 
     Args:
-        op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
+        op_path (Path) : Path to Openplanet installation folder. Default is "C:/Users/NAME/OpenplanetNext".
 
         action (ActType) : Action to write to TMData.
     """
@@ -78,7 +83,7 @@ def write_alt(op_path, reset : bool = None, pause : bool = None):
     r"""Writes data to TMData exchange file.
 
     Args:
-        op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
+        op_path (Path) : Path to Openplanet installation folder. Default is "C:/Users/NAME/OpenplanetNext".
 
         reset (bool) : Buffers a reset to TMData.
 
@@ -101,7 +106,7 @@ def get_observations(op_path, enabled : dict, rew_enabled : dict = None):
     r"""Grabs observations from TMData.
 
     Args:
-        op_path (Path) : Path to Openplanet installation folder. Default is "C:\Users\NAME\OpenplanetNext".
+        op_path (Path) : Path to Openplanet installation folder. Default is "C:/Users/NAME/OpenplanetNext".
 
         enabled (dict[str, bool]) : Dictionary describing enabled parameters in observation space.
 
