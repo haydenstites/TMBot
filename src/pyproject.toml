@@ -21,7 +21,7 @@ pywin32 = "^306"
 pillow = "^9.5.0"
 stable-baselines3 = "^2.0.0a5"
 sb3-contrib = "^2.0.0a4"
-torch = "^2.0.1"
+torch = "^2.0.0"
 wget = "^3.2"
 
 [build-system]

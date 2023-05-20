@@ -50,7 +50,7 @@ def init_tmdata(op_path = None):
     if not os.path.exists(dll_path):
         print(f"File {dll_path} does not exist, downloading...")
 
-        url = "https://github.com/Hayden-Stites/TMBot/raw/master/data/TMData/TMDataInputSys/x64/Debug/TMDataInputSys.dll"
+        url = "https://github.com/Hayden-Stites/TMBot/raw/master/data/TMDataInputSys/x64/Debug/TMDataInputSys.dll"
         file = wget.download(url, out=str(dll_path))
 
         print("Downloaded TMDataInputSys.dll")

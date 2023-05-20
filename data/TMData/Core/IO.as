@@ -57,10 +57,13 @@ void Input() {
 			}
 		}
 
-		bool enter = tostring(app.CurrentPlayground.GameTerminals[0].UISequence_Current) == "Finish"; // Close menu on finish
+		bool enter = false;
+		if (Setting_Input_Enter) {
+			enter = tostring(app.CurrentPlayground.GameTerminals[0].UISequence_Current) == "Finish"; // Close menu on finish
+		}
 
 		if (Setting_Input_Control == ControlType::Keyboard) {
-			SpoofKeys.Call((inputY > 0), (inputX < 0), (inputY < 0), (inputX > 0), enter, reset, escape, Setting_Input_ResetScan, Setting_Input_EscapeScan);
+			SpoofKeys.Call(int(inputY), int(inputX), enter, reset, escape, Setting_Input_EnterScan, Setting_Input_ResetScan, Setting_Input_EscapeScan);
 		}
 	}
 }

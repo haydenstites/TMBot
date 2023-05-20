@@ -9,6 +9,13 @@ from gymnasium.core import ActType
 from typing import Any
 from pathlib import Path
 
+# TODO:
+# Escape options TMData
+# Buffer class
+# Max framerate and reward scaling to it
+# Random map
+# Depth perception
+
 class TMBaseEnv(gym.Env):
     """Trackmania Base Environment, :meth:`reward` function can be overridden for custom implementations."""
     def __init__(self, 
@@ -104,8 +111,6 @@ class TMBaseEnv(gym.Env):
 
         return obs, reward, terminated, truncated, info
 
-    # TODO: Max framerate (sleep between writing action and getting observation)
-    # TODO: Divide timestep reward by framerate (max framerate?)
     def reward(self, action : ActType, obs : dict[str, Any], rew_vars : dict[str, Any]) -> tuple[float, bool, bool, dict]:
         r"""Reward function for agent. Can be overridden for alternate implementations.
 
@@ -130,14 +135,14 @@ class TMBaseEnv(gym.Env):
 
         # Timestep based rewards:
 
-        ts_reward, goal_reward = -.18, 0 # Small negative reward per timestep
+        ts_reward, goal_reward = -.2, 0 # Small negative reward per timestep
 
-        vel_rm, w_rm = 1.3, 0.05
+        vel_rm, w_rm = 1.3, 0.06
         ts_reward += obs["velocity"][0] * vel_rm
         ts_reward += action[0] * w_rm
 
         # TODO: Timestep rewards scale with steps per second
-        ts_rew_scale = .5
+        ts_rew_scale = .45
         ts_reward *= ts_rew_scale
 
         # Goal based rewards:
@@ -207,6 +212,7 @@ class TMBaseEnv(gym.Env):
 
         self.uns["start_time"] = self.rew["time"] + 1600
         self.uns["held_checkpoint"] = 0
+        self.uns["under_threshold"] = 0
         self.uns.setdefault("bonk_time", 0)
 
         if self.gui:

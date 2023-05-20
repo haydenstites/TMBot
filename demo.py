@@ -6,13 +6,12 @@ from tmbot.extras.extractors import custom_extractor_policy, SimpleCNN
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.callbacks import CallbackList
 
-op_path = r"C:\Users\Lab\OpenplanetNext"
 frame_shape = (3, 128, 128) # Channels, height, width
 
-cnn_kwargs = dict( # Increase frame resolution and kernel_size, increase CNN channels 
+cnn_kwargs = dict(
     layers = [
-        dict(out_channels = 64, kernel_size=16, stride=6, padding=0),
-        dict(out_channels = 128, kernel_size=4, stride=3, padding=0),
+        dict(out_channels = 64, kernel_size=12, stride=6, padding=0),
+        dict(out_channels = 128, kernel_size=5, stride=3, padding=0),
         dict(out_channels = 128, kernel_size=3, stride=1, padding=0),
     ]
 )
@@ -26,7 +25,6 @@ ppo_kwargs = dict(
     batch_size=256,
     ent_coef = 0.002,
     gae_lambda=0.94, # Low on main training, higher on map_specific training
-    #use_sde=True,
     verbose=1,
 )
 
@@ -54,13 +52,13 @@ def predict_demo(model_path : str, steps : int = 1e5, save_epochs : int = 3, gui
     num_envs = 1
     episode_starts = np.ones((num_envs,), dtype=bool)
 
-    for step in range(steps):
+    for step in range(int(steps)):
         action, lstm_states = model.predict(obs, state=lstm_states, episode_start=episode_starts, deterministic=True,)
         obs, rewards, dones, info = env.step(action)
         episode_starts = dones
 
 if __name__ == "__main__":
-    description = "Run sample implementations of TMBot"
+    description = "Run sample implementation of TMBot"
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument("-p", "--Predict", nargs="?", type=bool, default=False, const=True, help="Run predict loop instead of train loop")

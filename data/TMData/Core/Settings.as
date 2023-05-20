@@ -54,3 +54,9 @@ bool Setting_Input_Escape = true;
 
 [Setting category="Input" name="Pause Scancode" description="Physical keyboard scan code."]
 uint Setting_Input_EscapeScan = 01;
+
+[Setting category="Input" name="Enter" description="Activates on finish."]
+bool Setting_Input_Enter = true;
+
+[Setting category="Input" name="Enter Scancode" description="Physical keyboard scan code."]
+uint Setting_Input_EnterScan = 28;

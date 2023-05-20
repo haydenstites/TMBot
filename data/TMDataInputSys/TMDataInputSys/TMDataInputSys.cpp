@@ -10,7 +10,6 @@ UINT w_scan = 0x11; // 17
 UINT a_scan = 0x1e; // 30
 UINT s_scan = 0x1f; // 31
 UINT d_scan = 0x20; // 32
-UINT enter_scan = 0x1c;
 
 // Boilerplate input setup
 INPUT KeyInput(UINT scanCode) {
@@ -48,12 +47,17 @@ void HandleKey(bool key_down, UINT scanCode) {
 }
 
 // Input keys that should be pressed, reset_in scan code provided on reset
-TMDATAINPUTSYS_API void SpoofKeys(bool w, bool a, bool s, bool d, bool enter, bool reset, bool escape, UINT reset_scan, UINT escape_scan)
+TMDATAINPUTSYS_API void SpoofKeys(int inputY, int inputX, bool enter, bool reset, bool escape, UINT enter_scan, UINT reset_scan, UINT escape_scan)
 {
     HandleKey(enter, enter_scan);
 
     HandleKey(escape, escape_scan);
     HandleKey(reset, reset_scan);
+
+    bool w = (inputY > 0);
+    bool a = (inputX < 0);
+    bool s = (inputY < 0);
+    bool d = (inputX > 0);
 
     HandleKey(w, w_scan);
     HandleKey(a, a_scan);
