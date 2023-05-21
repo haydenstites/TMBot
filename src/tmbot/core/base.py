@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 import time
-from .IO import init_tmdata, get_observations, write_actions, write_alt
+from .IO import init_tmdata, TMDataBuffer
 from .util import get_frame, get_default_op_path, linear_interp
 from .gui import TMGUI
 from gymnasium.spaces import Box, Discrete, MultiDiscrete
@@ -10,22 +10,20 @@ from typing import Any
 from pathlib import Path
 
 # TODO:
-# Escape options TMData
-# Buffer class
-# Max framerate and reward scaling to it
 # Random map
 # Depth perception
 
 class TMBaseEnv(gym.Env):
     """Trackmania Base Environment, :meth:`reward` function can be overridden for custom implementations."""
-    def __init__(self, 
-            op_path : Path = None, 
-            frame_shape : tuple[int, int, int] = None, 
-            enabled : dict[str, bool] = None, 
-            rew_enabled : dict[str, bool] = None, 
-            sc_algorithm : str = "imagegrab", 
-            square_frame : bool = True, 
-            gui : bool = False, 
+    def __init__(self,
+            op_path : Path = None,
+            frame_shape : tuple[int, int, int] = None,
+            enabled : dict[str, bool] = None,
+            rew_enabled : dict[str, bool] = None,
+            sc_algorithm : str = "imagegrab",
+            square_frame : bool = True,
+            fps_max : int = 20,
+            gui : bool = False,
             gui_kwargs : dict[str, Any] = None
         ):
         r"""Initialization parameters for TMBaseEnv. Parameters in enabled and rew_enabled should match output variables in TMData.
@@ -44,6 +42,8 @@ class TMBaseEnv(gym.Env):
                 but requires the game to be windowed. Default is "imagegrab" for ease of use.
 
             square_frame (bool) : Crops observed frames to squares. Default is True.
+
+            fps_max (int) : Maximum allowed steps per second. Step rewards scale accordingly. Default is 20.
 
             gui (bool) : Enables a tkinter GUI for viewing training information. Default is False.
 
@@ -87,27 +87,40 @@ class TMBaseEnv(gym.Env):
         self.rew_enabled = rew_enabled
         self.sc_algorithm = sc_algorithm
         self.square_frame = square_frame
+        self.fps_max = fps_max
         self.gui = gui
 
         self.obs = {}
         self.rew = {}
         self.uns = {} # Unstructured data
 
+        self.buffer = TMDataBuffer()
+
         gui_kwargs = {} if gui_kwargs is None else gui_kwargs
         if self.gui:
             self.window = TMGUI(enabled=self.enabled, rew_enabled=self.rew_enabled, env=self, **gui_kwargs)
 
     def step(self, action):
-        write_actions(self.op_path, action)
+        self.buffer.write_actions(self.op_path, action)
 
         obs, rew_vars = self._handle_observations()
 
         ts_reward, goal_reward, terminated, truncated, info = self.reward(action, obs, rew_vars)
+        reward = ts_reward + goal_reward
+
+        # Limit steps per second
+        self.uns.setdefault("prev_time", 0)
+        true_ms = rew_vars["time"] - self.uns["prev_time"]
+        min_ms = 1000 / self.fps_max
+
+        if true_ms < min_ms:
+                diff = (min_ms - true_ms) / 1000
+                time.sleep(diff)
+
+        self.uns["prev_time"] = rew_vars["time"]
 
         if self.gui:
             self.window.update(obs, rew_vars, ts_reward, goal_reward)
-
-        reward = ts_reward + goal_reward
 
         return obs, reward, terminated, truncated, info
 
@@ -141,8 +154,8 @@ class TMBaseEnv(gym.Env):
         ts_reward += obs["velocity"][0] * vel_rm
         ts_reward += action[0] * w_rm
 
-        # TODO: Timestep rewards scale with steps per second
-        ts_rew_scale = .45
+        ts_rew_scale = 9 / self.fps_max
+
         ts_reward *= ts_rew_scale
 
         # Goal based rewards:
@@ -208,7 +221,7 @@ class TMBaseEnv(gym.Env):
     def reset(self):
         self.obs, self.rew = self._handle_observations()
 
-        write_alt(self.op_path, reset = True)
+        self.buffer.write_alt(self.op_path, reset = True)
 
         self.uns["start_time"] = self.rew["time"] + 1600
         self.uns["held_checkpoint"] = 0
@@ -223,23 +236,9 @@ class TMBaseEnv(gym.Env):
         return self.obs, info
     
     def _handle_observations(self):
-        # TODO: Find % of steps being held
-        try:
-            self.obs, self.rew = get_observations(self.op_path, self.enabled, self.rew_enabled)
-        except:
-            # Triggers if file is being written
-            self.uns.setdefault("steps_held", 0)
-            self.uns["steps_held"] += 1
-        self.obs["frame"] = self._handle_frame() # Frame isn't held
-
-        self.uns.setdefault("total_steps", 0)
-        self.uns["total_steps"] += 1
-
-        return self.obs, self.rew
-    
-    def _handle_frame(self):
+        self.obs, self.rew = self.buffer.get_observations(self.op_path, self.enabled, self.rew_enabled)
         if self.enabled["frame"]:
             # TODO: RGB observations
             mode = "L" if self.frame_shape[0] == 1 else "RGB"
-            frame = get_frame(self.frame_shape[1:], mode = mode, crop = self.square_frame, algorithm = self.sc_algorithm)
-        return frame
+            self.obs["frame"] = get_frame(self.frame_shape[1:], mode = mode, crop = self.square_frame, algorithm = self.sc_algorithm)
+        return self.obs, self.rew

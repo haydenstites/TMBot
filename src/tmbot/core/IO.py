@@ -5,6 +5,40 @@ import wget
 from .util import norm_float, binary_strbool, mat_index, race_index, get_default_op_path
 from pathlib import Path
 
+class TMDataBuffer():
+    def __init__(self):
+        self.buffer = {}
+        self.uns = {}
+
+    def write_actions(self, op_path, action):
+        if self.buffer["alt"] is not None:
+            write_alt(op_path, **self.buffer["alt"])
+
+        write_actions(op_path, action)
+
+    def write_alt(self, op_path, reset : bool = None, pause : bool = None):
+        try:
+            write_alt(op_path, reset, pause)
+            self.buffer["alt"] = None
+        except:
+            self.buffer["alt"] = dict(
+                reset = reset,
+                pause = pause,
+            )
+
+    def get_observations(self, op_path, enabled : dict, rew_enabled : dict = None):
+        try:
+            self.buffer["obs"] = get_observations(op_path, enabled, rew_enabled)
+        except:
+            # Triggers if file is being written
+            self.uns.setdefault("steps_held", 0)
+            self.uns["steps_held"] += 1
+        
+        self.uns.setdefault("total_steps", 0)
+        self.uns["total_steps"] += 1
+
+        return self.buffer["obs"]
+
 def init_tmdata(op_path = None):
     r"""Checks if all TMData files are present, and downloads them if any aren't.
 
