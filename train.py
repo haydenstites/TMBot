@@ -3,6 +3,13 @@ from tmbot.extras.callbacks import default_callbacks
 from tmbot.extras.extractors import custom_extractor_policy, SimpleCNN
 from sb3_contrib import RecurrentPPO
 
+map_urls= (
+    "https://github.com/Hayden-Stites/testmaps/raw/master/Train1.Map.Gbx",
+    "https://github.com/Hayden-Stites/testmaps/raw/master/Train2.Map.Gbx",
+    "https://github.com/Hayden-Stites/testmaps/raw/master/Train3.Map.Gbx",
+    "https://github.com/Hayden-Stites/testmaps/raw/master/Train4.Map.Gbx",
+    "https://github.com/Hayden-Stites/testmaps/raw/master/Train5.Map.Gbx",
+)
 frame_shape = (3, 128, 128) # Channels, height, width
 
 cnn_kwargs = dict(
@@ -25,10 +32,8 @@ ppo_kwargs = dict(
     verbose=1,
 )
 
-env = TMBaseEnv(frame_shape = frame_shape, gui = True)
+env = TMBaseEnv(map_urls=map_urls, frame_shape = frame_shape, gui = True)
 model = RecurrentPPO("MultiInputLstmPolicy", env, policy_kwargs=policy_kwargs, **ppo_kwargs) # TODO: Hyperparameter optimization
-
-model = model.load("TMBot_60", env=env)
 
 callbacks = default_callbacks()
 

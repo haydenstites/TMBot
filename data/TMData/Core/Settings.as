@@ -14,6 +14,9 @@ string Setting_IO_InName = "in.txt";
 [Setting category="IO" name="Alt File Name"]
 string Setting_IO_AltName = "alt.txt";
 
+[Setting category="IO" name="Maps File Name"]
+string Setting_IO_MapName = "maps.txt";
+
 
 [Setting category="Output" name="Observations" description="Observations necessary for TMBot"]
 bool Setting_Output_Observations = true;
@@ -34,29 +37,32 @@ enum ControlType
 	Gamepad,
 }
 
+[Setting category="Input" name="Epochs Per Map" description="How often to switch maps"]
+int Setting_Input_MapEpochs = 3;
+
 [Setting category="Input" name="Controller Type"]
 ControlType Setting_Input_Control = ControlType::Keyboard;
 
-[Setting category="Input" name="Deadzone" description="Note: Applies to both Keyboard and Gamepad control types."]
+[Setting category="Input" name="Deadzone" description="Note: Applies to both Keyboard and Gamepad control types"]
 bool Setting_Input_Deadzone = true;
 
-[Setting category="Input" name="Deadzone Magnitude" description="Note: Applies to both Keyboard and Gamepad control types." drag min=0 max=1]
+[Setting category="Input" name="Deadzone Magnitude" description="Note: Applies to both Keyboard and Gamepad control types" drag min=0 max=1]
 float Setting_Input_DeadzoneMag = 0.1f;
 
-[Setting category="Input" name="Reset" description="Control when game resets."]
+[Setting category="Input" name="Reset" description="Control when game resets"]
 bool Setting_Input_Reset = true;
 
-[Setting category="Input" name="Reset Scancode" description="Physical keyboard scan code."]
+[Setting category="Input" name="Reset Scancode" description="Physical keyboard scan code"]
 uint Setting_Input_ResetScan = 47;
 
-[Setting category="Input" name="Pause" description="Control when game pauses."]
+[Setting category="Input" name="Pause" description="Control when game pauses"]
 bool Setting_Input_Escape = true;
 
-[Setting category="Input" name="Pause Scancode" description="Physical keyboard scan code."]
+[Setting category="Input" name="Pause Scancode" description="Physical keyboard scan code"]
 uint Setting_Input_EscapeScan = 01;
 
-[Setting category="Input" name="Enter" description="Activates on finish."]
+[Setting category="Input" name="Enter" description="Activates on finish"]
 bool Setting_Input_Enter = true;
 
-[Setting category="Input" name="Enter Scancode" description="Physical keyboard scan code."]
+[Setting category="Input" name="Enter Scancode" description="Physical keyboard scan code"]
 uint Setting_Input_EnterScan = 28;

@@ -6,19 +6,25 @@ from .util import norm_float, binary_strbool, mat_index, race_index, get_default
 from pathlib import Path
 
 class TMDataBuffer():
-    def __init__(self):
+    def __init__(self, op_path : str):
+        self.op_path = op_path
+
         self.buffer = {}
         self.uns = {}
 
-    def write_actions(self, op_path, action):
+        self.buffer["obs"] = None
+        self.uns["total_steps"] = 0
+        self.uns["held_steps"] = 0
+
+    def write_actions(self, action):
         if self.buffer["alt"] is not None:
-            write_alt(op_path, **self.buffer["alt"])
+            write_alt(self.op_path, **self.buffer["alt"])
 
-        write_actions(op_path, action)
+        write_actions(self.op_path, action)
 
-    def write_alt(self, op_path, reset : bool = None, pause : bool = None):
+    def write_alt(self, reset : bool = None, pause : bool = None):
         try:
-            write_alt(op_path, reset, pause)
+            write_alt(self.op_path, reset, pause)
             self.buffer["alt"] = None
         except:
             self.buffer["alt"] = dict(
@@ -26,17 +32,15 @@ class TMDataBuffer():
                 pause = pause,
             )
 
-    def get_observations(self, op_path, enabled : dict, rew_enabled : dict = None):
-        try:
-            self.buffer["obs"] = get_observations(op_path, enabled, rew_enabled)
-        except:
-            # Triggers if file is being written
-            self.uns.setdefault("steps_held", 0)
-            self.uns["steps_held"] += 1
-        
-        self.uns.setdefault("total_steps", 0)
+    def get_observations(self, enabled : dict, rew_enabled : dict = None):
+        # TODO: Try until successful read
         self.uns["total_steps"] += 1
 
+        try:
+            self.buffer["obs"] = get_observations(self.op_path, enabled, rew_enabled)
+        except:
+            self.uns["held_steps"] += 1
+        
         return self.buffer["obs"]
 
 def init_tmdata(op_path = None):
@@ -96,6 +100,14 @@ def init_tmdata(op_path = None):
     Trackmania must be run with the TMData plugin before TMBot will function properly."""
     )
 
+def set_maps(op_path : str, map_urls : tuple[str]):
+    data_path = Path(op_path, "PluginStorage/TMData/maps.txt")
+
+    map_urls = () if map_urls is None else map_urls
+
+    data = pd.DataFrame([len(map_urls), *map_urls])
+    data.to_csv(data_path, index=False, header=False)
+
 # Write actions to TMData
 def write_actions(op_path, action):
     r"""Writes actions to TMData.
@@ -130,12 +142,12 @@ def write_alt(op_path, reset : bool = None, pause : bool = None):
 
     f = pd.read_csv(data_path, header=None)
 
-    if reset:
-        data = pd.DataFrame([1, f.transpose()[1].values[0]])
-    elif pause:
-        data = pd.DataFrame([f.transpose()[0].values[0], 1])
+    if reset or pause:
+        reset = 1 if reset else f.transpose()[0].values[0]
+        pause = 1 if pause else f.transpose()[1].values[0]
 
-    data.to_csv(data_path, index=False, header=False)
+        data = pd.DataFrame([reset, pause])
+        data.to_csv(data_path, index=False, header=False)
 
 # Read observations from TMData
 def get_observations(op_path, enabled : dict, rew_enabled : dict = None):

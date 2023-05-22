@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 import time
-from .IO import init_tmdata, TMDataBuffer
+from .IO import init_tmdata, set_maps, TMDataBuffer
 from .util import get_frame, get_default_op_path, linear_interp
 from .gui import TMGUI
 from gymnasium.spaces import Box, Discrete, MultiDiscrete
@@ -10,12 +10,15 @@ from typing import Any
 from pathlib import Path
 
 # TODO:
-# Random map
+# Buffer get_observation todo
+# Sleep if obs is same / Sleep if no control
+
 # Depth perception
 
 class TMBaseEnv(gym.Env):
     """Trackmania Base Environment, :meth:`reward` function can be overridden for custom implementations."""
     def __init__(self,
+            map_urls : tuple[str] = None,
             op_path : Path = None,
             frame_shape : tuple[int, int, int] = None,
             enabled : dict[str, bool] = None,
@@ -29,6 +32,8 @@ class TMBaseEnv(gym.Env):
         r"""Initialization parameters for TMBaseEnv. Parameters in enabled and rew_enabled should match output variables in TMData.
 
         Args:
+            map_urls (tuple[str]) : URLs to Trackmania map files. If None, maps will not switch during training. Default is None.
+
             op_path (Path) : Path to Openplanet installation folder. Default is "C:/Users/NAME/OpenplanetNext".
 
             frame_shape (tuple[int, int, int]) : Observation size of image frame passed to CNN, formatted (channels, height, width).
@@ -51,6 +56,7 @@ class TMBaseEnv(gym.Env):
         """
         self.op_path = get_default_op_path() if op_path is None else op_path
         init_tmdata(self.op_path)
+        set_maps(self.op_path, map_urls)
 
         min_frame_shape = (1, 36, 36)
         default_frame_shape = (1, 50, 50)
@@ -94,30 +100,28 @@ class TMBaseEnv(gym.Env):
         self.rew = {}
         self.uns = {} # Unstructured data
 
-        self.buffer = TMDataBuffer()
+        self.buffer = TMDataBuffer(self.op_path)
 
         gui_kwargs = {} if gui_kwargs is None else gui_kwargs
         if self.gui:
             self.window = TMGUI(enabled=self.enabled, rew_enabled=self.rew_enabled, env=self, **gui_kwargs)
 
     def step(self, action):
-        self.buffer.write_actions(self.op_path, action)
+        self.buffer.write_actions(action)
 
         obs, rew_vars = self._handle_observations()
-
-        ts_reward, goal_reward, terminated, truncated, info = self.reward(action, obs, rew_vars)
-        reward = ts_reward + goal_reward
 
         # Limit steps per second
         self.uns.setdefault("prev_time", 0)
         true_ms = rew_vars["time"] - self.uns["prev_time"]
         min_ms = 1000 / self.fps_max
-
         if true_ms < min_ms:
-                diff = (min_ms - true_ms) / 1000
-                time.sleep(diff)
-
+            diff = (min_ms - true_ms) / 1000
+            time.sleep(diff)
         self.uns["prev_time"] = rew_vars["time"]
+
+        ts_reward, goal_reward, terminated, truncated, info = self.reward(action, obs, rew_vars)
+        reward = ts_reward + goal_reward
 
         if self.gui:
             self.window.update(obs, rew_vars, ts_reward, goal_reward)
@@ -221,7 +225,7 @@ class TMBaseEnv(gym.Env):
     def reset(self):
         self.obs, self.rew = self._handle_observations()
 
-        self.buffer.write_alt(self.op_path, reset = True)
+        self.buffer.write_alt(reset = True)
 
         self.uns["start_time"] = self.rew["time"] + 1600
         self.uns["held_checkpoint"] = 0
@@ -236,7 +240,7 @@ class TMBaseEnv(gym.Env):
         return self.obs, info
     
     def _handle_observations(self):
-        self.obs, self.rew = self.buffer.get_observations(self.op_path, self.enabled, self.rew_enabled)
+        self.obs, self.rew = self.buffer.get_observations(self.enabled, self.rew_enabled)
         if self.enabled["frame"]:
             # TODO: RGB observations
             mode = "L" if self.frame_shape[0] == 1 else "RGB"
