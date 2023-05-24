@@ -33,7 +33,6 @@ class TMDataBuffer():
             )
 
     def get_observations(self, enabled : dict, rew_enabled : dict = None):
-        # TODO: Try until successful read
         self.uns["total_steps"] += 1
 
         try:

@@ -3,6 +3,18 @@ from tmbot.extras.callbacks import default_callbacks
 from tmbot.extras.extractors import custom_extractor_policy, SimpleCNN
 from sb3_contrib import RecurrentPPO
 
+# from tmbot.external.midas import TMMidas
+# from pathlib import Path
+# from PIL import Image
+# import numpy as np
+
+# path = Path("model/dpt_swin2_tiny_256.pt").resolve()
+# midas = TMMidas(path)
+
+# img = np.asarray(Image.open("model/test.jpg"))
+# pred = midas.step(img)
+# Image.fromarray(pred).convert("RGB").save("bruh.png")
+
 map_urls= (
     "https://github.com/Hayden-Stites/testmaps/raw/master/Train1.Map.Gbx",
     "https://github.com/Hayden-Stites/testmaps/raw/master/Train2.Map.Gbx",

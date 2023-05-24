@@ -10,9 +10,6 @@ from typing import Any
 from pathlib import Path
 
 # TODO:
-# Buffer get_observation todo
-# Sleep if obs is same / Sleep if no control
-
 # Depth perception
 
 class TMBaseEnv(gym.Env):
