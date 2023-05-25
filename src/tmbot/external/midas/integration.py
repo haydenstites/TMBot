@@ -23,7 +23,7 @@ class TMMidas():
             prediction (np.ndarray) : Array representing an image prediction
         """
         with torch.no_grad():
-            original_image_rgb = np.flip(frame, 2)
+            original_image_rgb = np.flip(frame.transpose(), 2)
             image = self.transform({"image": original_image_rgb/255})["image"]
 
             prediction = process(self.device, self.model, self.model_type, image, (self.net_w, self.net_h),
@@ -32,13 +32,6 @@ class TMMidas():
             return self._depth(prediction, True)
         
     def _depth(self, depth, grayscale, bits=1):
-        """Write depth map to png file.
-
-        Args:
-            path (str): filepath without extension
-            depth (array): depth
-            grayscale (bool): use a grayscale colormap?
-        """
         if not grayscale:
             bits = 1
 
@@ -63,27 +56,10 @@ class TMMidas():
     
 first_execution = True
 def process(device, model, model_type, image, input_size, target_size, optimize, use_camera):
-    """
-    Run the inference and interpolate.
-
-    Args:
-        device (torch.device): the torch device used
-        model: the model used for inference
-        model_type: the type of the model
-        image: the image fed into the neural network
-        input_size: the size (width, height) of the neural network input (for OpenVINO)
-        target_size: the size (width, height) the neural network output is interpolated to
-        optimize: optimize the model to half-floats on CUDA?
-        use_camera: is the camera used?
-
-    Returns:
-        the prediction
-    """
     global first_execution
 
     if "openvino" in model_type:
         if first_execution or not use_camera:
-            print(f"    Input resized to {input_size[0]}x{input_size[1]} before entering the encoder")
             first_execution = False
 
         sample = [np.reshape(image, (1, 3, *input_size))]
@@ -103,7 +79,6 @@ def process(device, model, model_type, image, input_size, target_size, optimize,
 
         if first_execution or not use_camera:
             height, width = sample.shape[2:]
-            print(f"    Input resized to {width}x{height} before entering the encoder")
             first_execution = False
 
         prediction = model.forward(sample)

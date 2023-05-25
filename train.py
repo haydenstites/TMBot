@@ -3,18 +3,6 @@ from tmbot.extras.callbacks import default_callbacks
 from tmbot.extras.extractors import custom_extractor_policy, SimpleCNN
 from sb3_contrib import RecurrentPPO
 
-# from tmbot.external.midas import TMMidas
-# from pathlib import Path
-# from PIL import Image
-# import numpy as np
-
-# path = Path("model/dpt_swin2_tiny_256.pt").resolve()
-# midas = TMMidas(path)
-
-# img = np.asarray(Image.open("model/test.jpg"))
-# pred = midas.step(img)
-# Image.fromarray(pred).convert("RGB").save("bruh.png")
-
 map_urls= (
     "https://github.com/Hayden-Stites/testmaps/raw/master/Train1.Map.Gbx",
     "https://github.com/Hayden-Stites/testmaps/raw/master/Train2.Map.Gbx",
@@ -24,16 +12,26 @@ map_urls= (
 )
 frame_shape = (3, 128, 128) # Channels, height, width
 
+# cnn_kwargs = dict(
+#     layers = [
+#         dict(out_channels = 64, kernel_size=12, stride=6, padding=0),
+#         dict(out_channels = 128, kernel_size=5, stride=3, padding=0),
+#         dict(out_channels = 128, kernel_size=3, stride=1, padding=0),
+#     ]
+# )
+# policy_kwargs["net_arch"] = [512, 512, 256, 256]
+
 cnn_kwargs = dict(
     layers = [
-        dict(out_channels = 64, kernel_size=12, stride=6, padding=0),
-        dict(out_channels = 128, kernel_size=5, stride=3, padding=0),
+        dict(out_channels = 64, kernel_size=9, stride=4, padding=0),
+        dict(out_channels = 128, kernel_size=5, stride=2, padding=0),
+        dict(out_channels = 128, kernel_size=3, stride=2, padding=0),
         dict(out_channels = 128, kernel_size=3, stride=1, padding=0),
     ]
 )
 
-policy_kwargs = custom_extractor_policy(SimpleCNN, cnn_kwargs)
-policy_kwargs["net_arch"] = [512, 512, 256, 256]
+policy_kwargs = custom_extractor_policy(SimpleCNN, cnn_kwargs, frame_output_dim=1024)
+policy_kwargs["net_arch"] = [1024, 512, 512, 256, 256]
 
 ppo_kwargs = dict(
     n_epochs=20,
@@ -44,7 +42,7 @@ ppo_kwargs = dict(
     verbose=1,
 )
 
-env = TMBaseEnv(map_urls=map_urls, frame_shape = frame_shape, gui = True)
+env = TMBaseEnv(map_urls=map_urls, frame_shape=frame_shape, gui=True)
 model = RecurrentPPO("MultiInputLstmPolicy", env, policy_kwargs=policy_kwargs, **ppo_kwargs) # TODO: Hyperparameter optimization
 
 callbacks = default_callbacks()

@@ -28,6 +28,8 @@ class TMGUI():
         self.env = env
         self.uns = {}
 
+        self.view_depth = False
+
         if type(self.buffer_size) is int and self.buffer_size > 0:
             self.uns.setdefault("ts_buffer", [])
             self.uns.setdefault("goal_buffer", [])
@@ -44,8 +46,15 @@ class TMGUI():
         sys_font = ("System", 0)
 
         # Menu
-        self.exit = tk.Button(master=self.window, text="Close GUI", command=self._close_gui, font=sys_font)
-        self.exit.grid(row=0, column=0, sticky="w")
+        self.menu_frame = tk.Frame(master=self.window)
+        self.menu_frame.grid(row=0, column=0, sticky="w")
+
+        self.exit_button = tk.Button(master=self.menu_frame, text="Close GUI", command=self._close_gui, font=sys_font)
+        self.exit_button.grid(row=0, column=0, sticky="w")
+
+        if self.env.midas is not None:
+            self.depth_button = tk.Button(master=self.menu_frame, text="Toggle Depth", command=self._toggle_depth, font=sys_font)
+            self.depth_button.grid(row=0, column=1, sticky="w")
 
         # Frame
         if enabled["frame"]:
@@ -101,7 +110,10 @@ class TMGUI():
     def update(self, obs, rew_vars, ts_reward, goal_reward):
         # Frame
         if obs["frame"] is not None:
-            image = Image.fromarray(obs["frame"].transpose()).resize(self.frame_size, resample=Image.Resampling.NEAREST)
+            if self.view_depth and self.env.midas is not None:
+                image = Image.fromarray(obs["frame"][3]).resize(self.frame_size, resample=Image.Resampling.NEAREST)
+            else:
+                image = Image.fromarray(obs["frame"][0:3].transpose().astype(np.uint8)).resize(self.frame_size, resample=Image.Resampling.NEAREST)
             frame_tk = ImageTk.PhotoImage(image)
             self.frame_display.config(image=frame_tk)
             self.frame_display.image = frame_tk
@@ -145,3 +157,6 @@ class TMGUI():
         if self.env is not None:
             self.env.gui = False
         self.window.destroy()
+
+    def _toggle_depth(self):
+        self.view_depth = not self.view_depth

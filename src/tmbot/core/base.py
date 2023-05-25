@@ -4,13 +4,11 @@ import time
 from .IO import init_tmdata, set_maps, TMDataBuffer
 from .util import get_frame, get_default_op_path, linear_interp
 from .gui import TMGUI
+from ..external.midas import TMMidas
 from gymnasium.spaces import Box, Discrete, MultiDiscrete
 from gymnasium.core import ActType
 from typing import Any
 from pathlib import Path
-
-# TODO:
-# Depth perception
 
 class TMBaseEnv(gym.Env):
     """Trackmania Base Environment, :meth:`reward` function can be overridden for custom implementations."""
@@ -23,6 +21,7 @@ class TMBaseEnv(gym.Env):
             sc_algorithm : str = "imagegrab",
             square_frame : bool = True,
             fps_max : int = 20,
+            midas_model : str = None,
             gui : bool = False,
             gui_kwargs : dict[str, Any] = None
         ):
@@ -47,6 +46,8 @@ class TMBaseEnv(gym.Env):
 
             fps_max (int) : Maximum allowed steps per second. Step rewards scale accordingly. Default is 20.
 
+            midas_model (str) : Path to pretrained MiDaS model, if used. Default is None.
+
             gui (bool) : Enables a tkinter GUI for viewing training information. Default is False.
 
             gui_kwargs (dict[str, Any]) : Keyword arguments for :class:`TMGUI`.
@@ -59,7 +60,13 @@ class TMBaseEnv(gym.Env):
         default_frame_shape = (1, 50, 50)
         frame_shape = default_frame_shape if frame_shape is None else frame_shape
         assert frame_shape >= min_frame_shape, f"frame_shape {frame_shape} is less than min_frame_shape {min_frame_shape}"
-        assert frame_shape[0] == 1 or frame_shape[0] == 3, f"frame_shape[0] must either be equal to 1 for grayscale observations or equal to 3 for RGB observations"
+        assert frame_shape[0] in (1, 3), f"frame_shape[0] must either be equal to 1 for grayscale observations or equal to 3 for RGB observations"
+
+        if midas_model is not None:
+            self.midas = TMMidas(midas_model)
+            frame_shape = (frame_shape[0] + 1, *frame_shape[1:])
+        else:
+            self.midas = None
 
         obs_vars = {
             "frame" : Box(low=0, high=255, shape=frame_shape, dtype=np.uint8), # Image specs of SB3
@@ -93,8 +100,6 @@ class TMBaseEnv(gym.Env):
         self.fps_max = fps_max
         self.gui = gui
 
-        self.obs = {}
-        self.rew = {}
         self.uns = {} # Unstructured data
 
         self.buffer = TMDataBuffer(self.op_path)
@@ -220,11 +225,11 @@ class TMBaseEnv(gym.Env):
         return ts_reward, goal_reward, terminated, truncated, info
 
     def reset(self):
-        self.obs, self.rew = self._handle_observations()
+        obs, rew_vars = self._handle_observations()
 
         self.buffer.write_alt(reset = True)
 
-        self.uns["start_time"] = self.rew["time"] + 1600
+        self.uns["start_time"] = rew_vars["time"] + 1600
         self.uns["held_checkpoint"] = 0
         self.uns["under_threshold"] = 0
         self.uns.setdefault("bonk_time", 0)
@@ -234,12 +239,18 @@ class TMBaseEnv(gym.Env):
 
         info = {}
 
-        return self.obs, info
+        return obs, info
     
     def _handle_observations(self):
-        self.obs, self.rew = self.buffer.get_observations(self.enabled, self.rew_enabled)
+        obs, rew = self.buffer.get_observations(self.enabled, self.rew_enabled)
         if self.enabled["frame"]:
-            # TODO: RGB observations
             mode = "L" if self.frame_shape[0] == 1 else "RGB"
-            self.obs["frame"] = get_frame(self.frame_shape[1:], mode = mode, crop = self.square_frame, algorithm = self.sc_algorithm)
-        return self.obs, self.rew
+            obs["frame"] = get_frame(self.frame_shape[1:], mode = mode, crop = self.square_frame, algorithm = self.sc_algorithm)
+
+            if self.midas is not None:
+                shape = (1, *self.frame_shape[1:])
+                depth = self.midas.step(obs["frame"]).reshape(shape)
+                
+                obs["frame"] = np.append(obs["frame"], depth, axis=0)
+
+        return obs, rew
