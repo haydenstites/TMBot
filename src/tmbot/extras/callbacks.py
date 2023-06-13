@@ -1,5 +1,5 @@
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList
-from ..core.IO import write_alt
+from ..core.IO import write_alt, write_actions
 from ..core.util import get_default_op_path
 from pathlib import Path
 
@@ -24,6 +24,7 @@ class TMPauseOnUpdate(BaseCallback):
     def _on_rollout_end(self):
         print("Rollout ending, pausing Trackmania.")
         write_alt(self.op_path, pause=True)
+        write_actions(self.op_path, (1, 1))
 
     def _on_step(self):
         # Required method, return False to abort training

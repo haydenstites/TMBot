@@ -65,13 +65,12 @@ void Input() {
 			enter = (cur_seq != "Playing");
 		}
 
-		if (Setting_Input_Control == ControlType::Keyboard) {
-			SpoofKeys.Call(int(inputY), int(inputX), enter, reset, escape, Setting_Input_EnterScan, Setting_Input_ResetScan, Setting_Input_EscapeScan);
-		}
-
 		if (escape == 1) {
 			if (isPaused) {
 				isPaused = false;
+			}
+			else {
+				isPaused = true;
 
 				map_epochs += 1;
 				if (map_epochs >= Setting_Input_MapEpochs) {
@@ -81,9 +80,10 @@ void Input() {
 					app.BackToMainMenu();
 				}
 			}
-			else {
-				isPaused = true;
-			}
+		}
+
+		if (Setting_Input_Control == ControlType::Keyboard) {
+			SpoofKeys.Call(int(inputY), int(inputX), enter, reset, false, Setting_Input_EnterScan, Setting_Input_ResetScan, Setting_Input_EscapeScan);
 		}
 	}
 }
@@ -106,7 +106,7 @@ void SwitchMap() {
 				mapID = f.ReadLine();
 			}
 
-			print(mapID);
+			print("Loading " + mapID);
 
 			app.ManiaTitleControlScriptAPI.PlayMap(mapID, "", "");
 
